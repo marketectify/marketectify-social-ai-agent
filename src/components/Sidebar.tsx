@@ -16,7 +16,7 @@ interface SidebarProps {
 }
 
 const navItems: { id: TabId; label: string; icon: typeof LayoutDashboard; description: string }[] = [
-  { id: "overview", label: "Overview Dashboard", icon: LayoutDashboard, description: "Key metrics & quick actions" },
+  { id: "overview", label: "Dashboard", icon: LayoutDashboard, description: "Key metrics & quick actions" },
   { id: "studio", label: "AI Content Studio", icon: Sparkles, description: "Generate captions, reels & visuals" },
   { id: "calendar", label: "Calendar & Approvals", icon: CalendarClock, description: "Schedule & approve content" },
   { id: "inbox", label: "Unified Inbox", icon: Inbox, description: "AI auto-responder for DMs" },
