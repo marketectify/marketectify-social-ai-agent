@@ -35,20 +35,20 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
       )}
 
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 shrink-0 glass border-r border-slate-800/80 transition-transform duration-300 ${
+        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 shrink-0 glass border-r border-slate-200/80 transition-transform duration-300 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="px-6 py-5 border-b border-slate-800/80">
+          <div className="px-6 py-5 border-b border-slate-200/80">
             <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center glow-purple">
+              <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-sky-600 flex items-center justify-center glow-blue">
                 <Zap className="w-5 h-5 text-white" fill="white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-white leading-tight">Marketectify</h1>
-                <p className="text-[10px] text-violet-400 font-medium tracking-wider uppercase">AI Social Agent</p>
+                <h1 className="text-lg font-bold text-slate-900 leading-tight">Marketectify</h1>
+                <p className="text-[10px] text-blue-600 font-medium tracking-wider uppercase">AI Social Agent</p>
               </div>
             </div>
           </div>
@@ -67,19 +67,19 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
                   }}
                   className={`w-full group flex items-start gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left ${
                     active
-                      ? "bg-gradient-to-r from-violet-500/20 to-indigo-500/10 border border-violet-500/30 glow-purple"
-                      : "hover:bg-slate-800/50 border border-transparent"
+                      ? "bg-gradient-to-r from-blue-500/20 to-sky-500/10 border border-blue-500/30 glow-blue"
+                      : "hover:bg-slate-100/50 border border-transparent"
                   }`}
                 >
                   <Icon
                     className={`w-5 h-5 mt-0.5 shrink-0 transition-colors ${
-                      active ? "text-violet-400" : "text-slate-400 group-hover:text-slate-200"
+                      active ? "text-blue-600" : "text-slate-600 group-hover:text-slate-800"
                     }`}
                   />
                   <div className="min-w-0">
                     <p
                       className={`text-sm font-semibold leading-tight ${
-                        active ? "text-white" : "text-slate-300 group-hover:text-white"
+                        active ? "text-slate-900" : "text-slate-700 group-hover:text-slate-900"
                       }`}
                     >
                       {item.label}
@@ -96,14 +96,14 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
             <div className="glass-light rounded-xl p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-medium text-slate-300">AI Engine Online</span>
+                <span className="text-xs font-medium text-slate-700">AI Engine Online</span>
               </div>
               <div className="flex items-center justify-between text-[11px] text-slate-500">
                 <span>GPT-4o · Gemini Pro</span>
                 <span className="text-emerald-400 font-medium">Active</span>
               </div>
-              <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                <div className="h-full w-[78%] rounded-full bg-gradient-to-r from-violet-500 to-indigo-500" />
+              <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                <div className="h-full w-[78%] rounded-full bg-gradient-to-r from-blue-500 to-sky-500" />
               </div>
               <p className="text-[10px] text-slate-500">Monthly AI credits: 7,800 / 10,000</p>
             </div>

@@ -33,7 +33,7 @@ const platformIcons: Record<Platform, IconType> = {
 };
 
 const platformColor: Record<Platform, string> = {
-  facebook: "text-blue-400",
+  facebook: "text-blue-600",
   instagram: "text-pink-400",
   tiktok: "text-cyan-300",
   youtube: "text-red-400",
@@ -68,11 +68,11 @@ export default function Inbox() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <InboxIcon className="w-6 h-6 text-violet-400" />
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <InboxIcon className="w-6 h-6 text-blue-600" />
             Unified AI Inbox
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-600 mt-1">
             All your DMs & comments in one stream · {unreadCount} unread
           </p>
         </div>
@@ -80,16 +80,16 @@ export default function Inbox() {
         {/* Auto-pilot toggle */}
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl glass-light">
           <div className="relative">
-            <Zap className={`w-5 h-5 ${autoPilot ? "text-violet-400" : "text-slate-500"}`} />
+            <Zap className={`w-5 h-5 ${autoPilot ? "text-blue-600" : "text-slate-500"}`} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white">AI Auto-Pilot Mode</p>
+            <p className="text-sm font-semibold text-slate-900">AI Auto-Pilot Mode</p>
             <p className="text-[10px] text-slate-500">Auto-reply to comments & DMs</p>
           </div>
           <button
             onClick={() => setAutoPilot(!autoPilot)}
             className={`relative w-12 h-6 rounded-full transition-all ${
-              autoPilot ? "bg-gradient-to-r from-violet-500 to-indigo-500 glow-purple" : "bg-slate-700"
+              autoPilot ? "bg-gradient-to-r from-blue-500 to-sky-500 glow-blue" : "bg-slate-200"
             }`}
           >
             <span
@@ -98,7 +98,7 @@ export default function Inbox() {
               }`}
             />
           </button>
-          <span className={`text-xs font-bold ${autoPilot ? "text-violet-300" : "text-slate-500"}`}>
+          <span className={`text-xs font-bold ${autoPilot ? "text-blue-700" : "text-slate-500"}`}>
             {autoPilot ? "ON" : "OFF"}
           </span>
         </div>
@@ -108,19 +108,19 @@ export default function Inbox() {
       <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-280px)] min-h-[500px]">
         {/* Message list */}
         <div className="w-full lg:w-80 shrink-0 glass rounded-2xl flex flex-col overflow-hidden">
-          <div className="p-3 border-b border-slate-800/80">
+          <div className="p-3 border-b border-slate-200/80">
             <div className="flex items-center gap-2">
               <input
                 type="text"
                 placeholder="Search messages..."
-                className="w-full h-9 px-3 rounded-lg bg-slate-800/50 border border-slate-700/50 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-violet-500/50 transition-all"
+                className="w-full h-9 px-3 rounded-lg bg-slate-100/50 border border-slate-200/50 text-xs text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50 transition-all"
               />
             </div>
             <div className="flex items-center gap-2 mt-2">
               {(["facebook", "instagram", "tiktok", "youtube"] as Platform[]).map((p) => {
                 const Icon = platformIcons[p];
                 return (
-                  <div key={p} className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-700/40 transition-colors cursor-pointer" title={platformLabels[p]}>
+                  <div key={p} className="p-1.5 rounded-lg bg-slate-100/40 hover:bg-slate-200/40 transition-colors cursor-pointer" title={platformLabels[p]}>
                     <Icon className={`w-3.5 h-3.5 ${platformColor[p]}`} />
                   </div>
                 );
@@ -137,35 +137,35 @@ export default function Inbox() {
                 <button
                   key={msg.id}
                   onClick={() => handleSelect(msg)}
-                  className={`w-full flex items-start gap-3 p-3 border-b border-slate-800/40 transition-all text-left ${
-                    active ? "bg-violet-500/10 border-l-2 border-l-violet-500" : "hover:bg-slate-800/40 border-l-2 border-l-transparent"
+                  className={`w-full flex items-start gap-3 p-3 border-b border-slate-200/40 transition-all text-left ${
+                    active ? "bg-blue-500/10 border-l-2 border-l-blue-500" : "hover:bg-slate-100/40 border-l-2 border-l-transparent"
                   }`}
                 >
                   <div className={`relative w-10 h-10 rounded-full bg-gradient-to-br ${msg.avatarColor} flex items-center justify-center shrink-0`}>
                     <span className="text-xs font-bold text-white">
                       {msg.sender.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                     </span>
-                    <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-slate-900 flex items-center justify-center`}>
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white flex items-center justify-center`}>
                       <Icon className={`w-2.5 h-2.5 ${platformColor[msg.platform]}`} />
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className={`text-sm truncate ${msg.unread ? "font-bold text-white" : "font-medium text-slate-300"}`}>
+                      <p className={`text-sm truncate ${msg.unread ? "font-bold text-slate-900" : "font-medium text-slate-700"}`}>
                         {msg.sender}
                       </p>
                       <span className="text-[10px] text-slate-500 shrink-0">{msg.timestamp}</span>
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
-                        msg.type === "dm" ? "bg-violet-500/15 text-violet-300" : "bg-blue-500/15 text-blue-300"
+                        msg.type === "dm" ? "bg-blue-500/15 text-blue-700" : "bg-blue-500/15 text-blue-700"
                       }`}>
                         {msg.type === "dm" ? "DM" : "Comment"}
                       </span>
                       <p className="text-xs text-slate-500 truncate">{msg.message}</p>
                     </div>
                   </div>
-                  {msg.unread && <span className="w-2 h-2 rounded-full bg-violet-400 shrink-0 animate-pulse" />}
+                  {msg.unread && <span className="w-2 h-2 rounded-full bg-blue-400 shrink-0 animate-pulse" />}
                 </button>
               );
             })}
@@ -175,23 +175,23 @@ export default function Inbox() {
         {/* Chat view */}
         <div className="flex-1 glass rounded-2xl flex flex-col overflow-hidden">
           {/* Chat header */}
-          <div className="flex items-center gap-3 p-4 border-b border-slate-800/80">
+          <div className="flex items-center gap-3 p-4 border-b border-slate-200/80">
             <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${selected.avatarColor} flex items-center justify-center shrink-0`}>
               <span className="text-xs font-bold text-white">
                 {selected.sender.split(" ").map((n) => n[0]).join("").slice(0, 2)}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-white">{selected.sender}</p>
+              <p className="text-sm font-bold text-slate-900">{selected.sender}</p>
               <p className="text-xs text-slate-500">{selected.senderHandle}</p>
             </div>
             <div className="flex items-center gap-2">
               {(() => {
                 const Icon = platformIcons[selected.platform];
                 return (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/50">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100/50">
                     <Icon className={`w-3.5 h-3.5 ${platformColor[selected.platform]}`} />
-                    <span className="text-xs font-medium text-slate-300">{platformLabels[selected.platform]}</span>
+                    <span className="text-xs font-medium text-slate-700">{platformLabels[selected.platform]}</span>
                   </div>
                 );
               })()}
@@ -208,8 +208,8 @@ export default function Inbox() {
                 </span>
               </div>
               <div>
-                <div className="bg-slate-800/60 rounded-2xl rounded-tl-sm p-3.5">
-                  <p className="text-sm text-slate-200 leading-relaxed">{selected.message}</p>
+                <div className="bg-slate-100/60 rounded-2xl rounded-tl-sm p-3.5">
+                  <p className="text-sm text-slate-800 leading-relaxed">{selected.message}</p>
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1">
                   <Clock className="w-3 h-3" /> {selected.timestamp}
@@ -218,31 +218,31 @@ export default function Inbox() {
             </div>
 
             {/* AI suggested reply banner */}
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-violet-500/10 border border-violet-500/20">
-              <Bot className="w-4 h-4 text-violet-400 shrink-0" />
-              <p className="text-xs text-violet-300 font-medium">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
+              <Bot className="w-4 h-4 text-blue-600 shrink-0" />
+              <p className="text-xs text-blue-700 font-medium">
                 AI Auto-Pilot {autoPilot ? "drafted" : "suggested"} a reply. {autoPilot ? "It will auto-send in 30s." : "Review and send manually."}
               </p>
             </div>
           </div>
 
           {/* Reply composer */}
-          <div className="p-4 border-t border-slate-800/80 space-y-3">
-            <div className="rounded-xl bg-slate-800/50 border border-slate-700/50 focus-within:border-violet-500/50 transition-all">
+          <div className="p-4 border-t border-slate-200/80 space-y-3">
+            <div className="rounded-xl bg-slate-100/50 border border-slate-200/50 focus-within:border-blue-500/50 transition-all">
               <textarea
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
                 placeholder="Type your reply or use AI suggestion..."
                 rows={3}
-                className="w-full px-4 py-3 bg-transparent text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none resize-none"
+                className="w-full px-4 py-3 bg-transparent text-sm text-slate-800 placeholder:text-slate-500 focus:outline-none resize-none"
               />
               <div className="flex items-center justify-between px-3 pb-3">
                 <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-violet-500/15 text-violet-300 text-xs font-medium hover:bg-violet-500/25 transition-colors">
+                  <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/15 text-blue-700 text-xs font-medium hover:bg-blue-500/25 transition-colors">
                     <Bot className="w-3.5 h-3.5" />
                     Regenerate AI Reply
                   </button>
-                  <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-400 text-xs font-medium hover:bg-slate-700/40 transition-colors">
+                  <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-600 text-xs font-medium hover:bg-slate-200/40 transition-colors">
                     <Edit3 className="w-3.5 h-3.5" />
                     Edit
                   </button>
@@ -250,7 +250,7 @@ export default function Inbox() {
                 <button
                   onClick={handleSend}
                   disabled={!replyText.trim()}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold text-white hover:from-violet-500 hover:to-indigo-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed glow-purple"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-sky-600 text-sm font-semibold text-white hover:from-blue-500 hover:to-sky-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed glow-blue"
                 >
                   <Send className="w-4 h-4" />
                   Send
