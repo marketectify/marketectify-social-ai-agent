@@ -13,7 +13,7 @@ export const platformLabels: Record<Platform, string> = {
 };
 
 export const platformColors: Record<Platform, string> = {
-  facebook: "text-blue-400",
+  facebook: "text-blue-600",
   instagram: "text-pink-400",
   tiktok: "text-cyan-300",
   youtube: "text-red-400",
@@ -33,7 +33,7 @@ export const statCards: StatCard[] = [
     trend: "+14.5%",
     trendUp: true,
     icon: "Eye",
-    gradient: "from-violet-500/20 to-indigo-500/10",
+    gradient: "from-blue-500/20 to-sky-500/10",
   },
   {
     label: "Total Followers",
@@ -70,7 +70,7 @@ export const upcomingPosts: ScheduledPost[] = [
     time: "10:00 AM",
     platforms: ["instagram", "tiktok", "youtube"],
     status: "approved",
-    thumbnailGradient: "from-violet-600 to-indigo-600",
+    thumbnailGradient: "from-blue-600 to-sky-600",
     hashtags: ["#AI", "#ProductLaunch", "#Marketectify"],
   },
   {
@@ -140,7 +140,7 @@ export const calendarPosts: ScheduledPost[] = [
     time: "1:00 PM",
     platforms: ["facebook", "youtube"],
     status: "pending",
-    thumbnailGradient: "from-indigo-600 to-purple-600",
+    thumbnailGradient: "from-sky-600 to-purple-600",
     hashtags: ["#Webinar", "#SMB", "#AIEducation"],
   },
   {
@@ -151,7 +151,7 @@ export const calendarPosts: ScheduledPost[] = [
     time: "5:00 PM",
     platforms: ["instagram", "tiktok", "youtube"],
     status: "pending",
-    thumbnailGradient: "from-purple-600 to-violet-700",
+    thumbnailGradient: "from-purple-600 to-blue-700",
     hashtags: ["#Halloween", "#SpookySeason", "#AIDeals"],
   },
   {
@@ -199,7 +199,7 @@ export const inboxMessages: InboxMessage[] = [
     platform: "facebook",
     sender: "Jessica Park",
     senderHandle: "Jessica Park",
-    avatarColor: "from-blue-500 to-indigo-500",
+    avatarColor: "from-blue-500 to-sky-500",
     message: "What's the pricing for the enterprise plan? We have a team of 20+",
     timestamp: "1 hour ago",
     unread: false,
@@ -225,7 +225,7 @@ export const inboxMessages: InboxMessage[] = [
     platform: "instagram",
     sender: "Emily Watson",
     senderHandle: "@emilydesigns",
-    avatarColor: "from-violet-500 to-purple-500",
+    avatarColor: "from-blue-500 to-purple-500",
     message: "Just signed up! The reel generation feature is a game changer 🔥",
     timestamp: "5 hours ago",
     unread: false,

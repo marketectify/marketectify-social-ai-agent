@@ -24,14 +24,14 @@ function TikTokIcon({ className }: { className?: string }) {
 
 export default function TopNav({ onMenuClick }: TopNavProps) {
   return (
-    <header className="sticky top-0 z-30 glass border-b border-slate-800/80">
+    <header className="sticky top-0 z-30 glass border-b border-slate-200/80">
       {/* Main nav row */}
       <div className="flex items-center gap-3 px-4 lg:px-6 h-16">
         <button
           onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-lg hover:bg-slate-800/60 transition-colors"
+          className="lg:hidden p-2 rounded-lg hover:bg-slate-100/60 transition-colors"
         >
-          <Menu className="w-5 h-5 text-slate-300" />
+          <Menu className="w-5 h-5 text-slate-700" />
         </button>
 
         {/* Search */}
@@ -40,49 +40,49 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
           <input
             type="text"
             placeholder="Search posts, campaigns, analytics..."
-            className="w-full h-10 pl-10 pr-4 rounded-xl bg-slate-800/50 border border-slate-700/50 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-violet-500/50 focus:ring-2 focus:ring-violet-500/20 transition-all"
+            className="w-full h-10 pl-10 pr-4 rounded-xl bg-slate-100/50 border border-slate-200/50 text-sm text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
           />
         </div>
 
         <div className="flex items-center gap-2 lg:gap-3 ml-auto">
           {/* Upgrade button */}
-          <button className="hidden sm:flex items-center gap-2 px-4 h-10 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-sm font-semibold text-white hover:from-violet-500 hover:to-indigo-500 transition-all glow-purple hover:scale-[1.02] active:scale-95">
+          <button className="hidden sm:flex items-center gap-2 px-4 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-sky-600 text-sm font-semibold text-white hover:from-blue-500 hover:to-sky-500 transition-all glow-blue hover:scale-[1.02] active:scale-95">
             <Plus className="w-4 h-4" />
             Upgrade System
           </button>
 
           {/* Notifications */}
-          <button className="relative p-2.5 rounded-xl hover:bg-slate-800/60 transition-colors group">
-            <Bell className="w-5 h-5 text-slate-300 group-hover:text-white" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-violet-500 ring-2 ring-slate-900 animate-pulse" />
+          <button className="relative p-2.5 rounded-xl hover:bg-slate-100/60 transition-colors group">
+            <Bell className="w-5 h-5 text-slate-700 group-hover:text-slate-900" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 ring-2 ring-white animate-pulse" />
           </button>
 
           {/* Profile switcher */}
-          <button className="flex items-center gap-2.5 pl-2 pr-3 h-10 rounded-xl hover:bg-slate-800/60 transition-colors group">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white">
+          <button className="flex items-center gap-2.5 pl-2 pr-3 h-10 rounded-xl hover:bg-slate-100/60 transition-colors group">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-sky-600 flex items-center justify-center text-xs font-bold text-white">
               MK
             </div>
             <div className="hidden md:block text-left">
-              <p className="text-sm font-semibold text-white leading-tight">MarketKing Co.</p>
+              <p className="text-sm font-semibold text-slate-900 leading-tight">MarketKing Co.</p>
               <p className="text-[10px] text-slate-500">Pro Plan</p>
             </div>
-            <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-white" />
+            <ChevronDown className="w-4 h-4 text-slate-600 group-hover:text-slate-900" />
           </button>
         </div>
       </div>
 
       {/* Connected accounts bar */}
-      <div className="flex items-center gap-2 px-4 lg:px-6 py-2.5 border-t border-slate-800/60 overflow-x-auto scrollbar-thin">
+      <div className="flex items-center gap-2 px-4 lg:px-6 py-2.5 border-t border-slate-200/60 overflow-x-auto scrollbar-thin">
         <span className="text-xs font-medium text-slate-500 shrink-0 mr-1">Connected:</span>
         {connectedAccounts.map((acc) => {
           const Icon = acc.icon;
           return (
             <div
               key={acc.platform}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/40 border border-slate-700/40 shrink-0 hover:border-slate-600/60 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100/40 border border-slate-200/40 shrink-0 hover:border-slate-300/60 transition-colors"
             >
-              <Icon className="w-3.5 h-3.5 text-slate-300" />
-              <span className="text-xs font-medium text-slate-300">{acc.label}</span>
+              <Icon className="w-3.5 h-3.5 text-slate-700" />
+              <span className="text-xs font-medium text-slate-700">{acc.label}</span>
               <span className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 <span className="text-[10px] text-emerald-400 font-medium">Connected</span>

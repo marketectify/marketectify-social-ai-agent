@@ -38,7 +38,7 @@ const platformIcons: Record<Platform, IconType> = {
 const statusConfig: Record<PostStatus, { label: string; dot: string; badge: string; icon: typeof Clock3 }> = {
   pending: { label: "Pending Approval", dot: "bg-amber-400", badge: "bg-amber-500/15 text-amber-400 border-amber-500/30", icon: AlertCircle },
   approved: { label: "Approved & Scheduled", dot: "bg-emerald-400", badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },
-  published: { label: "Auto-Published", dot: "bg-blue-400", badge: "bg-blue-500/15 text-blue-400 border-blue-500/30", icon: CheckCircle2 },
+  published: { label: "Auto-Published", dot: "bg-blue-400", badge: "bg-blue-500/15 text-blue-600 border-blue-500/30", icon: CheckCircle2 },
 };
 
 const daysInMonth = 31;
@@ -73,19 +73,19 @@ export default function Calendar() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-            <CalendarDays className="w-6 h-6 text-violet-400" />
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <CalendarDays className="w-6 h-6 text-blue-600" />
             Content Calendar & Approval Center
           </h2>
-          <p className="text-sm text-slate-400 mt-1">Review, approve, and schedule posts across all platforms.</p>
+          <p className="text-sm text-slate-600 mt-1">Review, approve, and schedule posts across all platforms.</p>
         </div>
 
         {/* View toggle */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-800/50 border border-slate-700/50">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-100/50 border border-slate-200/50">
           <button
             onClick={() => setView("month")}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              view === "month" ? "bg-violet-500/20 text-violet-300 border border-violet-500/30" : "text-slate-400 hover:text-slate-200"
+              view === "month" ? "bg-blue-500/20 text-blue-700 border border-blue-500/30" : "text-slate-600 hover:text-slate-800"
             }`}
           >
             Month
@@ -93,7 +93,7 @@ export default function Calendar() {
           <button
             onClick={() => setView("week")}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              view === "week" ? "bg-violet-500/20 text-violet-300 border border-violet-500/30" : "text-slate-400 hover:text-slate-200"
+              view === "week" ? "bg-blue-500/20 text-blue-700 border border-blue-500/30" : "text-slate-600 hover:text-slate-800"
             }`}
           >
             Week
@@ -109,7 +109,7 @@ export default function Calendar() {
           return (
             <div key={s} className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${cfg.dot}`} />
-              <span className="text-xs font-medium text-slate-400 flex items-center gap-1">
+              <span className="text-xs font-medium text-slate-600 flex items-center gap-1">
                 <Icon className="w-3.5 h-3.5" />
                 {cfg.label}
               </span>
@@ -122,16 +122,16 @@ export default function Calendar() {
       <div className="glass rounded-2xl p-4 sm:p-5">
         {/* Month navigation */}
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-white">October 2026</h3>
+          <h3 className="text-lg font-bold text-slate-900">October 2026</h3>
           <div className="flex items-center gap-2">
-            <button className="p-2 rounded-lg hover:bg-slate-800/60 transition-colors">
-              <ChevronLeft className="w-4 h-4 text-slate-400" />
+            <button className="p-2 rounded-lg hover:bg-slate-100/60 transition-colors">
+              <ChevronLeft className="w-4 h-4 text-slate-600" />
             </button>
-            <button className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors">
+            <button className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100/60 transition-colors">
               Today
             </button>
-            <button className="p-2 rounded-lg hover:bg-slate-800/60 transition-colors">
-              <ChevronRight className="w-4 h-4 text-slate-400" />
+            <button className="p-2 rounded-lg hover:bg-slate-100/60 transition-colors">
+              <ChevronRight className="w-4 h-4 text-slate-600" />
             </button>
           </div>
         </div>
@@ -149,7 +149,7 @@ export default function Calendar() {
         <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
           {/* Empty cells before month start */}
           {Array.from({ length: monthStartDay }).map((_, i) => (
-            <div key={`empty-${i}`} className="min-h-[80px] sm:min-h-[110px] rounded-xl bg-slate-800/20 border border-slate-800/40" />
+            <div key={`empty-${i}`} className="min-h-[80px] sm:min-h-[110px] rounded-xl bg-slate-100/20 border border-slate-200/40" />
           ))}
 
           {/* Day cells */}
@@ -163,16 +163,16 @@ export default function Calendar() {
                 key={day}
                 className={`min-h-[80px] sm:min-h-[110px] rounded-xl p-1.5 border transition-all ${
                   isToday
-                    ? "bg-violet-500/10 border-violet-500/40 glow-purple"
-                    : "bg-slate-800/30 border-slate-700/40 hover:border-slate-600/60"
+                    ? "bg-blue-500/10 border-blue-500/40 glow-blue"
+                    : "bg-slate-100/30 border-slate-200/40 hover:border-slate-300/60"
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className={`text-xs font-semibold ${isToday ? "text-violet-300" : "text-slate-400"}`}>
+                  <span className={`text-xs font-semibold ${isToday ? "text-blue-700" : "text-slate-600"}`}>
                     {day}
                   </span>
                   {dayPosts.length > 0 && (
-                    <span className="text-[9px] text-slate-500 bg-slate-700/40 px-1.5 rounded">
+                    <span className="text-[9px] text-slate-500 bg-slate-200/40 px-1.5 rounded">
                       {dayPosts.length}
                     </span>
                   )}
@@ -229,7 +229,7 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
       />
 
       {/* Drawer */}
-      <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] z-50 glass border-l border-slate-700/50 overflow-y-auto scrollbar-thin animate-slide-in">
+      <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[480px] z-50 glass border-l border-slate-200/50 overflow-y-auto scrollbar-thin animate-slide-in">
         <div className="p-5 space-y-5">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -239,8 +239,8 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
                 {status.label}
               </span>
             </div>
-            <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-800/60 transition-colors">
-              <X className="w-5 h-5 text-slate-400" />
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100/60 transition-colors">
+              <X className="w-5 h-5 text-slate-600" />
             </button>
           </div>
 
@@ -263,16 +263,16 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
 
           {/* Title & caption */}
           <div>
-            <h3 className="text-lg font-bold text-white">{post.title}</h3>
-            <p className="text-sm text-slate-300 mt-2 leading-relaxed">{post.caption}</p>
+            <h3 className="text-lg font-bold text-slate-900">{post.title}</h3>
+            <p className="text-sm text-slate-700 mt-2 leading-relaxed">{post.caption}</p>
           </div>
 
           {/* Hashtags */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 mb-2">Hashtags</p>
+            <p className="text-xs font-semibold text-slate-600 mb-2">Hashtags</p>
             <div className="flex flex-wrap gap-2">
               {post.hashtags.map((tag) => (
-                <span key={tag} className="px-2.5 py-1 rounded-lg bg-violet-500/15 text-violet-300 text-xs font-medium border border-violet-500/20">
+                <span key={tag} className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 text-xs font-medium border border-blue-500/20">
                   {tag}
                 </span>
               ))}
@@ -281,7 +281,7 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
 
           {/* Platform checkboxes */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 mb-2">Publishing Platforms</p>
+            <p className="text-xs font-semibold text-slate-600 mb-2">Publishing Platforms</p>
             <div className="grid grid-cols-2 gap-2">
               {(Object.keys(platformLabels) as Platform[]).map((p) => {
                 const Icon = platformIcons[p];
@@ -292,15 +292,15 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
                     onClick={() => togglePlatform(p)}
                     className={`flex items-center gap-2.5 p-3 rounded-xl border transition-all ${
                       selected
-                        ? "bg-violet-500/15 border-violet-500/40 text-white"
-                        : "bg-slate-800/30 border-slate-700/40 text-slate-400 hover:border-slate-600"
+                        ? "bg-blue-500/15 border-blue-500/40 text-slate-900"
+                        : "bg-slate-100/30 border-slate-200/40 text-slate-600 hover:border-slate-300"
                     }`}
                   >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selected ? "bg-violet-500/20" : "bg-slate-700/40"}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selected ? "bg-blue-500/20" : "bg-slate-200/40"}`}>
                       <Icon className={`w-4 h-4 ${selected ? platformColors[p] : "text-slate-500"}`} />
                     </div>
                     <span className="text-sm font-medium">{platformLabels[p]}</span>
-                    {selected && <Check className="w-4 h-4 text-violet-400 ml-auto" />}
+                    {selected && <Check className="w-4 h-4 text-blue-600 ml-auto" />}
                   </button>
                 );
               })}
@@ -308,11 +308,11 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
           </div>
 
           {/* Scheduled time */}
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-800/40 border border-slate-700/40">
-            <Clock className="w-5 h-5 text-violet-400" />
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-100/40 border border-slate-200/40">
+            <Clock className="w-5 h-5 text-blue-600" />
             <div>
               <p className="text-xs text-slate-500">Scheduled for</p>
-              <p className="text-sm font-semibold text-white">{post.date}, 2026 · {post.time}</p>
+              <p className="text-sm font-semibold text-slate-900">{post.date}, 2026 · {post.time}</p>
             </div>
           </div>
 
@@ -324,7 +324,7 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
                 Approve & Schedule
               </button>
             )}
-            <button className="flex-1 h-12 rounded-xl bg-slate-800 border border-slate-700 text-sm font-bold text-slate-200 hover:bg-slate-700 transition-all flex items-center justify-center gap-2">
+            <button className="flex-1 h-12 rounded-xl bg-slate-100 border border-slate-200 text-sm font-bold text-slate-800 hover:bg-slate-200 transition-all flex items-center justify-center gap-2">
               <Edit3 className="w-4 h-4" />
               Edit
             </button>

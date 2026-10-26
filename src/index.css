@@ -4,29 +4,29 @@
 
 @layer base {
   * {
-    @apply border-slate-800;
+    @apply border-slate-200;
   }
   body {
-    @apply bg-slate-950 text-slate-100 antialiased;
+    @apply bg-slate-50 text-slate-900 antialiased;
     font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
 }
 
 @layer utilities {
   .glass {
-    @apply bg-slate-900/60 backdrop-blur-xl border border-slate-800/80;
+    @apply bg-white/90 backdrop-blur-xl border border-slate-200/80 shadow-sm;
   }
   .glass-light {
-    @apply bg-slate-800/40 backdrop-blur-md border border-slate-700/50;
-  }
-  .glow-purple {
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.1);
-  }
-  .glow-emerald {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.1);
+    @apply bg-blue-50/70 backdrop-blur-md border border-blue-100;
   }
   .glow-blue {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2), 0 0 40px rgba(59, 130, 246, 0.08);
+  }
+  .glow-emerald {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), 0 0 40px rgba(16, 185, 129, 0.08);
+  }
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2), 0 0 40px rgba(59, 130, 246, 0.08);
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
@@ -36,17 +36,17 @@
     background: transparent;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-slate-700 rounded-full;
+    @apply bg-slate-300 rounded-full;
   }
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    @apply bg-slate-600;
+    @apply bg-slate-400;
   }
   .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-indigo-400;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-sky-500;
   }
 }
 
 /* Custom select styling */
 select option {
-  @apply bg-slate-900 text-slate-100;
+  @apply bg-white text-slate-900;
 }
