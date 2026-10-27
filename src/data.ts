@@ -13,10 +13,10 @@ export const platformLabels: Record<Platform, string> = {
 };
 
 export const platformColors: Record<Platform, string> = {
-  facebook: "text-blue-600",
-  instagram: "text-pink-400",
-  tiktok: "text-cyan-300",
-  youtube: "text-red-400",
+  facebook: "text-blue-600 dark:text-blue-400",
+  instagram: "text-pink-600 dark:text-pink-400",
+  tiktok: "text-cyan-700 dark:text-cyan-300",
+  youtube: "text-red-600 dark:text-red-400",
 };
 
 export const platformBg: Record<Platform, string> = {
@@ -33,7 +33,7 @@ export const statCards: StatCard[] = [
     trend: "+14.5%",
     trendUp: true,
     icon: "Eye",
-    gradient: "from-blue-500/20 to-sky-500/10",
+    accent: "bg-blue-500/10 border-blue-500/20",
   },
   {
     label: "Total Followers",
@@ -41,7 +41,7 @@ export const statCards: StatCard[] = [
     trend: "+8.3%",
     trendUp: true,
     icon: "Users",
-    gradient: "from-blue-500/20 to-cyan-500/10",
+    accent: "bg-sky-500/10 border-sky-500/20",
   },
   {
     label: "Engagement Rate",
@@ -49,7 +49,7 @@ export const statCards: StatCard[] = [
     trend: "+2.1%",
     trendUp: true,
     icon: "Heart",
-    gradient: "from-pink-500/20 to-rose-500/10",
+    accent: "bg-indigo-500/10 border-indigo-500/20",
   },
   {
     label: "Leads Generated",
@@ -57,7 +57,7 @@ export const statCards: StatCard[] = [
     trend: "+22.7%",
     trendUp: true,
     icon: "Target",
-    gradient: "from-emerald-500/20 to-teal-500/10",
+    accent: "bg-cyan-500/10 border-cyan-500/20",
   },
 ];
 
@@ -70,7 +70,7 @@ export const upcomingPosts: ScheduledPost[] = [
     time: "10:00 AM",
     platforms: ["instagram", "tiktok", "youtube"],
     status: "approved",
-    thumbnailGradient: "from-blue-600 to-sky-600",
+    thumbnailColor: "bg-blue-600",
     hashtags: ["#AI", "#ProductLaunch", "#Marketectify"],
   },
   {
@@ -81,7 +81,7 @@ export const upcomingPosts: ScheduledPost[] = [
     time: "2:00 PM",
     platforms: ["facebook", "instagram"],
     status: "pending",
-    thumbnailGradient: "from-blue-600 to-cyan-600",
+    thumbnailColor: "bg-sky-700",
     hashtags: ["#BehindTheScenes", "#TeamSpotlight"],
   },
   {
@@ -92,7 +92,7 @@ export const upcomingPosts: ScheduledPost[] = [
     time: "11:30 AM",
     platforms: ["facebook", "instagram", "tiktok", "youtube"],
     status: "pending",
-    thumbnailGradient: "from-emerald-600 to-teal-600",
+    thumbnailColor: "bg-indigo-600",
     hashtags: ["#SuccessStory", "#CaseStudy", "#Growth"],
   },
   {
@@ -103,7 +103,7 @@ export const upcomingPosts: ScheduledPost[] = [
     time: "9:00 AM",
     platforms: ["instagram", "tiktok", "youtube"],
     status: "approved",
-    thumbnailGradient: "from-amber-600 to-orange-600",
+    thumbnailColor: "bg-cyan-700",
     hashtags: ["#ReelsTips", "#AIHacks", "#ViralContent"],
   },
 ];
@@ -118,7 +118,7 @@ export const calendarPosts: ScheduledPost[] = [
     time: "3:00 PM",
     platforms: ["facebook", "instagram"],
     status: "published",
-    thumbnailGradient: "from-slate-600 to-slate-700",
+    thumbnailColor: "bg-blue-800",
     hashtags: ["#AI", "#News", "#WeeklyRoundup"],
   },
   {
@@ -129,7 +129,7 @@ export const calendarPosts: ScheduledPost[] = [
     time: "8:00 AM",
     platforms: ["facebook", "instagram", "tiktok", "youtube"],
     status: "approved",
-    thumbnailGradient: "from-red-600 to-pink-600",
+    thumbnailColor: "bg-blue-700",
     hashtags: ["#FlashSale", "#Discount", "#LimitedTime"],
   },
   {
@@ -140,7 +140,7 @@ export const calendarPosts: ScheduledPost[] = [
     time: "1:00 PM",
     platforms: ["facebook", "youtube"],
     status: "pending",
-    thumbnailGradient: "from-sky-600 to-purple-600",
+    thumbnailColor: "bg-sky-700",
     hashtags: ["#Webinar", "#SMB", "#AIEducation"],
   },
   {
@@ -151,7 +151,7 @@ export const calendarPosts: ScheduledPost[] = [
     time: "5:00 PM",
     platforms: ["instagram", "tiktok", "youtube"],
     status: "pending",
-    thumbnailGradient: "from-purple-600 to-blue-700",
+    thumbnailColor: "bg-indigo-700",
     hashtags: ["#Halloween", "#SpookySeason", "#AIDeals"],
   },
   {
@@ -162,7 +162,7 @@ export const calendarPosts: ScheduledPost[] = [
     time: "10:00 AM",
     platforms: ["facebook", "instagram", "tiktok", "youtube"],
     status: "approved",
-    thumbnailGradient: "from-teal-600 to-cyan-700",
+    thumbnailColor: "bg-cyan-800",
     hashtags: ["#MonthlyRecap", "#Analytics", "#Growth"],
   },
 ];
@@ -173,7 +173,7 @@ export const inboxMessages: InboxMessage[] = [
     platform: "instagram",
     sender: "Sarah Chen",
     senderHandle: "@sarahcreative",
-    avatarColor: "from-pink-500 to-rose-500",
+    avatarColor: "bg-pink-600",
     message: "Love your content! How can I get started with Marketectify for my agency?",
     timestamp: "2 min ago",
     unread: true,
@@ -186,7 +186,7 @@ export const inboxMessages: InboxMessage[] = [
     platform: "tiktok",
     sender: "Mike Rivera",
     senderHandle: "@mikebuilds",
-    avatarColor: "from-cyan-500 to-blue-500",
+    avatarColor: "bg-cyan-700",
     message: "This AI tool is insane! Does it support scheduling for multiple clients?",
     timestamp: "15 min ago",
     unread: true,
@@ -199,7 +199,7 @@ export const inboxMessages: InboxMessage[] = [
     platform: "facebook",
     sender: "Jessica Park",
     senderHandle: "Jessica Park",
-    avatarColor: "from-blue-500 to-sky-500",
+    avatarColor: "bg-blue-600",
     message: "What's the pricing for the enterprise plan? We have a team of 20+",
     timestamp: "1 hour ago",
     unread: false,
@@ -212,7 +212,7 @@ export const inboxMessages: InboxMessage[] = [
     platform: "youtube",
     sender: "David Kumar",
     senderHandle: "@davidtechreview",
-    avatarColor: "from-red-500 to-orange-500",
+    avatarColor: "bg-red-600",
     message: "Great video! Can the AI generate content in Spanish?",
     timestamp: "3 hours ago",
     unread: false,
@@ -225,7 +225,7 @@ export const inboxMessages: InboxMessage[] = [
     platform: "instagram",
     sender: "Emily Watson",
     senderHandle: "@emilydesigns",
-    avatarColor: "from-blue-500 to-purple-500",
+    avatarColor: "bg-indigo-600",
     message: "Just signed up! The reel generation feature is a game changer 🔥",
     timestamp: "5 hours ago",
     unread: false,
@@ -238,7 +238,7 @@ export const inboxMessages: InboxMessage[] = [
     platform: "tiktok",
     sender: "Alex Foster",
     senderHandle: "@alexfosterbiz",
-    avatarColor: "from-teal-500 to-emerald-500",
+    avatarColor: "bg-teal-700",
     message: "Do you offer integrations with HubSpot?",
     timestamp: "8 hours ago",
     unread: false,

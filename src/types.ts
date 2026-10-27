@@ -17,7 +17,7 @@ export interface ScheduledPost {
   time: string;
   platforms: Platform[];
   status: PostStatus;
-  thumbnailGradient: string;
+  thumbnailColor: string;
   hashtags: string[];
 }
 
@@ -40,5 +40,5 @@ export interface StatCard {
   trend: string;
   trendUp: boolean;
   icon: string;
-  gradient: string;
+  accent: string;
 }

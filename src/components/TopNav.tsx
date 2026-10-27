@@ -1,8 +1,12 @@
 import { Search, Bell, ChevronDown, Plus, Menu, Facebook, Instagram, Youtube } from "lucide-react";
 import type { Platform } from "../types";
+import type { Theme } from "../theme";
+import ThemeToggle from "./ThemeToggle";
 
 interface TopNavProps {
   onMenuClick: () => void;
+  theme: Theme;
+  onToggleTheme: () => void;
 }
 
 type IconType = React.ComponentType<{ className?: string }>;
@@ -22,7 +26,7 @@ function TikTokIcon({ className }: { className?: string }) {
   );
 }
 
-export default function TopNav({ onMenuClick }: TopNavProps) {
+export default function TopNav({ onMenuClick, theme, onToggleTheme }: TopNavProps) {
   return (
     <header className="sticky top-0 z-30 glass border-b border-slate-200/80">
       {/* Main nav row */}
@@ -46,20 +50,23 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
 
         <div className="flex items-center gap-2 lg:gap-3 ml-auto">
           {/* Upgrade button */}
-          <button className="hidden sm:flex items-center gap-2 px-4 h-10 rounded-xl bg-gradient-to-r from-blue-600 to-sky-600 text-sm font-semibold text-white hover:from-blue-500 hover:to-sky-500 transition-all glow-blue hover:scale-[1.02] active:scale-95">
+          <button className="hidden sm:flex items-center gap-2 px-4 h-10 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-all glow-blue hover:scale-[1.02] active:scale-95">
             <Plus className="w-4 h-4" />
             Upgrade System
           </button>
 
+          {/* Dark / light theme switch */}
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+
           {/* Notifications */}
           <button className="relative p-2.5 rounded-xl hover:bg-slate-100/60 transition-colors group">
             <Bell className="w-5 h-5 text-slate-700 group-hover:text-slate-900" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 ring-2 ring-white animate-pulse" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-blue-500 ring-2 ring-surface animate-pulse" />
           </button>
 
           {/* Profile switcher */}
           <button className="flex items-center gap-2.5 pl-2 pr-3 h-10 rounded-xl hover:bg-slate-100/60 transition-colors group">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-sky-600 flex items-center justify-center text-xs font-bold text-white">
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
               MK
             </div>
             <div className="hidden md:block text-left">
@@ -85,7 +92,7 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
               <span className="text-xs font-medium text-slate-700">{acc.label}</span>
               <span className="flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-[10px] text-emerald-400 font-medium">Connected</span>
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Connected</span>
               </span>
             </div>
           );

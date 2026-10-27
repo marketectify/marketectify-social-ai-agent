@@ -33,10 +33,10 @@ const platformIcons: Record<Platform, IconType> = {
 };
 
 const platformColor: Record<Platform, string> = {
-  facebook: "text-blue-600",
-  instagram: "text-pink-400",
-  tiktok: "text-cyan-300",
-  youtube: "text-red-400",
+  facebook: "text-blue-600 dark:text-blue-400",
+  instagram: "text-pink-600 dark:text-pink-400",
+  tiktok: "text-cyan-700 dark:text-cyan-300",
+  youtube: "text-red-600 dark:text-red-400",
 };
 
 export default function Inbox() {
@@ -69,7 +69,7 @@ export default function Inbox() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <InboxIcon className="w-6 h-6 text-blue-600" />
+            <InboxIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             Unified AI Inbox
           </h2>
           <p className="text-sm text-slate-600 mt-1">
@@ -80,7 +80,7 @@ export default function Inbox() {
         {/* Auto-pilot toggle */}
         <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl glass-light">
           <div className="relative">
-            <Zap className={`w-5 h-5 ${autoPilot ? "text-blue-600" : "text-slate-500"}`} />
+            <Zap className={`w-5 h-5 ${autoPilot ? "text-blue-600 dark:text-blue-400" : "text-slate-500"}`} />
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-900">AI Auto-Pilot Mode</p>
@@ -89,7 +89,7 @@ export default function Inbox() {
           <button
             onClick={() => setAutoPilot(!autoPilot)}
             className={`relative w-12 h-6 rounded-full transition-all ${
-              autoPilot ? "bg-gradient-to-r from-blue-500 to-sky-500 glow-blue" : "bg-slate-200"
+              autoPilot ? "bg-blue-600" : "bg-slate-300"
             }`}
           >
             <span
@@ -98,7 +98,7 @@ export default function Inbox() {
               }`}
             />
           </button>
-          <span className={`text-xs font-bold ${autoPilot ? "text-blue-700" : "text-slate-500"}`}>
+          <span className={`text-xs font-bold ${autoPilot ? "text-blue-700 dark:text-blue-300" : "text-slate-500"}`}>
             {autoPilot ? "ON" : "OFF"}
           </span>
         </div>
@@ -141,11 +141,11 @@ export default function Inbox() {
                     active ? "bg-blue-500/10 border-l-2 border-l-blue-500" : "hover:bg-slate-100/40 border-l-2 border-l-transparent"
                   }`}
                 >
-                  <div className={`relative w-10 h-10 rounded-full bg-gradient-to-br ${msg.avatarColor} flex items-center justify-center shrink-0`}>
+                  <div className={`relative w-10 h-10 rounded-full ${msg.avatarColor} flex items-center justify-center shrink-0`}>
                     <span className="text-xs font-bold text-white">
                       {msg.sender.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                     </span>
-                    <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white flex items-center justify-center`}>
+                    <div className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-surface flex items-center justify-center`}>
                       <Icon className={`w-2.5 h-2.5 ${platformColor[msg.platform]}`} />
                     </div>
                   </div>
@@ -158,7 +158,7 @@ export default function Inbox() {
                     </div>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
-                        msg.type === "dm" ? "bg-blue-500/15 text-blue-700" : "bg-blue-500/15 text-blue-700"
+                        msg.type === "dm" ? "bg-blue-500/15 text-blue-700 dark:text-blue-300" : "bg-blue-500/15 text-blue-700 dark:text-blue-300"
                       }`}>
                         {msg.type === "dm" ? "DM" : "Comment"}
                       </span>
@@ -176,7 +176,7 @@ export default function Inbox() {
         <div className="flex-1 glass rounded-2xl flex flex-col overflow-hidden">
           {/* Chat header */}
           <div className="flex items-center gap-3 p-4 border-b border-slate-200/80">
-            <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${selected.avatarColor} flex items-center justify-center shrink-0`}>
+            <div className={`w-10 h-10 rounded-full ${selected.avatarColor} flex items-center justify-center shrink-0`}>
               <span className="text-xs font-bold text-white">
                 {selected.sender.split(" ").map((n) => n[0]).join("").slice(0, 2)}
               </span>
@@ -202,7 +202,7 @@ export default function Inbox() {
           <div className="flex-1 overflow-y-auto scrollbar-thin p-4 space-y-4">
             {/* Incoming message */}
             <div className="flex items-start gap-3 max-w-[80%]">
-              <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${selected.avatarColor} flex items-center justify-center shrink-0`}>
+              <div className={`w-8 h-8 rounded-full ${selected.avatarColor} flex items-center justify-center shrink-0`}>
                 <span className="text-[10px] font-bold text-white">
                   {selected.sender.split(" ").map((n) => n[0]).join("").slice(0, 2)}
                 </span>
@@ -219,8 +219,8 @@ export default function Inbox() {
 
             {/* AI suggested reply banner */}
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-blue-500/10 border border-blue-500/20">
-              <Bot className="w-4 h-4 text-blue-600 shrink-0" />
-              <p className="text-xs text-blue-700 font-medium">
+              <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
                 AI Auto-Pilot {autoPilot ? "drafted" : "suggested"} a reply. {autoPilot ? "It will auto-send in 30s." : "Review and send manually."}
               </p>
             </div>
@@ -238,7 +238,7 @@ export default function Inbox() {
               />
               <div className="flex items-center justify-between px-3 pb-3">
                 <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/15 text-blue-700 text-xs font-medium hover:bg-blue-500/25 transition-colors">
+                  <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 text-xs font-medium hover:bg-blue-500/25 transition-colors">
                     <Bot className="w-3.5 h-3.5" />
                     Regenerate AI Reply
                   </button>
@@ -250,7 +250,7 @@ export default function Inbox() {
                 <button
                   onClick={handleSend}
                   disabled={!replyText.trim()}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-sky-600 text-sm font-semibold text-white hover:from-blue-500 hover:to-sky-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed glow-blue"
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed glow-blue"
                 >
                   <Send className="w-4 h-4" />
                   Send

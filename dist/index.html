@@ -8,10 +8,22 @@
     <meta property="og:image" content="https://bolt.new/static/og_default.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:image" content="https://bolt.new/static/og_default.png">
-    <script type="module" crossorigin src="/assets/index-BPk2L6_s.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D1ruj6AE.css">
+    <script>
+      // Apply the saved (or system) theme before first paint to avoid a flash.
+      (function () {
+        try {
+          var saved = localStorage.getItem("theme");
+          var dark = saved
+            ? saved === "dark"
+            : window.matchMedia("(prefers-color-scheme: dark)").matches;
+          if (dark) document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-CsL5EdpO.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CzxAxweI.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
   </body>
 </html>
