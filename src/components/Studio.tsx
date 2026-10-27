@@ -54,7 +54,7 @@ export default function Studio() {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-blue-600" />
+          <Sparkles className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           AI Content Creation Studio
         </h2>
         <p className="text-sm text-slate-600 mt-1">Generate captions, scripts, and visuals powered by GPT-4o & Gemini Pro.</p>
@@ -87,7 +87,7 @@ export default function Studio() {
           {/* AI Engine buttons */}
           <div className="glass rounded-2xl p-5 space-y-3">
             <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-              <Wand2 className="w-4 h-4 text-blue-600" />
+              <Wand2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               AI Generation Engines
             </h3>
 
@@ -95,7 +95,7 @@ export default function Studio() {
               icon={Hash}
               title="Generate Captions & Hashtags"
               subtitle="Powered by GPT-4o"
-              gradient="from-blue-600 to-sky-600"
+              color="bg-blue-600"
               loading={loading === "captions"}
               done={generatedCaptions}
               onClick={() => handleGenerate("captions")}
@@ -104,7 +104,7 @@ export default function Studio() {
               icon={Video}
               title="Generate Reel / Short Video Script & Voiceover"
               subtitle="Powered by Gemini Pro"
-              gradient="from-blue-600 to-cyan-600"
+              color="bg-sky-700"
               loading={loading === "script"}
               done={generatedScript}
               onClick={() => handleGenerate("script")}
@@ -113,7 +113,7 @@ export default function Studio() {
               icon={Image}
               title="Generate Visual Media / Graphics"
               subtitle="Powered by DALL·E 3"
-              gradient="from-pink-600 to-rose-600"
+              color="bg-indigo-600"
               loading={loading === "visual"}
               done={generatedVisual}
               onClick={() => handleGenerate("visual")}
@@ -132,7 +132,7 @@ export default function Studio() {
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
                     {["#AIMarketing", "#SocialMediaTools", "#ContentAutomation", "#MarketectifyAI", "#GrowthHacking", "#SaaS"].map((tag) => (
-                      <span key={tag} className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 text-xs font-medium border border-blue-500/20">
+                      <span key={tag} className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 text-xs font-medium border border-blue-500/20">
                         {tag}
                       </span>
                     ))}
@@ -143,10 +143,10 @@ export default function Studio() {
               {generatedScript && (
                 <OutputCard title="Reel Script & Voiceover" icon={Video}>
                   <div className="space-y-2 text-sm text-slate-800">
-                    <p><span className="text-blue-600 font-semibold">[0:00-0:03]</span> Hook: "What if your social media ran itself?" (Voiceover: energetic, curious tone)</p>
-                    <p><span className="text-blue-600 font-semibold">[0:03-0:08]</span> Visual: Quick montage of dashboards, calendar auto-filling, analytics climbing.</p>
-                    <p><span className="text-blue-600 font-semibold">[0:08-0:15]</span> Narration: "Marketectify AI creates, schedules, and optimizes content across 4 platforms — automatically."</p>
-                    <p><span className="text-blue-600 font-semibold">[0:15-0:25]</span> CTA: "Start your free trial today. Link in bio." (Upbeat music fade-out)</p>
+                    <p><span className="text-blue-600 dark:text-blue-400 font-semibold">[0:00-0:03]</span> Hook: "What if your social media ran itself?" (Voiceover: energetic, curious tone)</p>
+                    <p><span className="text-blue-600 dark:text-blue-400 font-semibold">[0:03-0:08]</span> Visual: Quick montage of dashboards, calendar auto-filling, analytics climbing.</p>
+                    <p><span className="text-blue-600 dark:text-blue-400 font-semibold">[0:08-0:15]</span> Narration: "Marketectify AI creates, schedules, and optimizes content across 4 platforms — automatically."</p>
+                    <p><span className="text-blue-600 dark:text-blue-400 font-semibold">[0:15-0:25]</span> CTA: "Start your free trial today. Link in bio." (Upbeat music fade-out)</p>
                   </div>
                 </OutputCard>
               )}
@@ -154,11 +154,11 @@ export default function Studio() {
               {generatedVisual && (
                 <OutputCard title="Generated Visual Media" icon={Image}>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="aspect-square rounded-xl bg-gradient-to-br from-blue-600 via-sky-600 to-blue-600 flex items-center justify-center relative overflow-hidden">
+                    <div className="aspect-square rounded-xl bg-blue-600 flex items-center justify-center relative overflow-hidden">
                       <div className="absolute inset-0 bg-black/20" />
                       <p className="relative text-white font-bold text-sm text-center px-4">AI-Generated Hero Graphic</p>
                     </div>
-                    <div className="aspect-square rounded-xl bg-gradient-to-br from-pink-600 via-rose-600 to-orange-500 flex items-center justify-center relative overflow-hidden">
+                    <div className="aspect-square rounded-xl bg-indigo-600 flex items-center justify-center relative overflow-hidden">
                       <div className="absolute inset-0 bg-black/20" />
                       <p className="relative text-white font-bold text-sm text-center px-4">Story Template Variant</p>
                     </div>
@@ -181,7 +181,7 @@ export default function Studio() {
                     onClick={() => setActivePreview(p)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                       activePreview === p
-                        ? "bg-blue-500/20 text-blue-700 border border-blue-500/30"
+                        ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30"
                         : "text-slate-600 hover:text-slate-800 border border-transparent"
                     }`}
                   >
@@ -235,7 +235,7 @@ function GenerateButton({
   icon: Icon,
   title,
   subtitle,
-  gradient,
+  color,
   loading,
   done,
   onClick,
@@ -243,7 +243,7 @@ function GenerateButton({
   icon: typeof Hash;
   title: string;
   subtitle: string;
-  gradient: string;
+  color: string;
   loading: boolean;
   done: boolean;
   onClick: () => void;
@@ -254,7 +254,7 @@ function GenerateButton({
       disabled={loading}
       className="w-full group flex items-center gap-3 p-3.5 rounded-xl glass-light hover:border-slate-300 transition-all hover:scale-[1.01] active:scale-[0.99] text-left disabled:opacity-60"
     >
-      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
+      <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center shrink-0`}>
         {loading ? (
           <Loader2 className="w-5 h-5 text-white animate-spin" />
         ) : done ? (
@@ -267,7 +267,7 @@ function GenerateButton({
         <p className="text-sm font-semibold text-slate-900">{title}</p>
         <p className="text-[11px] text-slate-500">{loading ? "Generating..." : done ? "Generated ✓ — click to regenerate" : subtitle}</p>
       </div>
-      {done && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
+      {done && <Check className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />}
     </button>
   );
 }
@@ -276,7 +276,7 @@ function OutputCard({ title, icon: Icon, children }: { title: string; icon: type
   return (
     <div className="glass rounded-2xl p-5">
       <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-3">
-        <Icon className="w-4 h-4 text-blue-600" />
+        <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
         {title}
       </h4>
       {children}
@@ -286,11 +286,11 @@ function OutputCard({ title, icon: Icon, children }: { title: string; icon: type
 
 function InstagramPreview() {
   return (
-    <div className="max-w-sm mx-auto rounded-2xl overflow-hidden bg-white border border-slate-200/50 animate-fade-in">
+    <div className="max-w-sm mx-auto rounded-2xl overflow-hidden bg-surface border border-slate-200/50 animate-fade-in">
       {/* Header */}
       <div className="flex items-center gap-2.5 p-3">
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-500 via-red-500 to-amber-500 p-0.5">
-          <div className="w-full h-full rounded-full bg-white flex items-center justify-center text-xs font-bold text-slate-900">
+        <div className="w-9 h-9 rounded-full bg-pink-500 p-0.5">
+          <div className="w-full h-full rounded-full bg-surface flex items-center justify-center text-xs font-bold text-slate-900">
             MK
           </div>
         </div>
@@ -302,18 +302,18 @@ function InstagramPreview() {
       </div>
 
       {/* Image */}
-      <div className="aspect-[4/5] bg-gradient-to-br from-blue-600 via-sky-600 to-blue-600 relative flex items-center justify-center">
+      <div className="aspect-[4/5] bg-blue-600 relative flex items-center justify-center">
         <div className="absolute inset-0 bg-black/10" />
         <div className="relative text-center px-6">
           <Sparkles className="w-10 h-10 text-white/90 mx-auto mb-3" />
           <p className="text-white font-bold text-lg">The Future of Social Media is Here</p>
-          <p className="text-white/70 text-sm mt-1">Marketectify AI Scheduler</p>
+          <p className="text-white/90 text-sm mt-1">Marketectify AI Scheduler</p>
         </div>
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-4 p-3">
-        <Heart className="w-6 h-6 text-red-400" fill="currentColor" />
+        <Heart className="w-6 h-6 text-red-600 dark:text-red-400" fill="currentColor" />
         <MessageCircle className="w-6 h-6 text-slate-700" />
         <Send className="w-6 h-6 text-slate-700" />
         <Bookmark className="w-6 h-6 text-slate-700 ml-auto" />
@@ -325,7 +325,7 @@ function InstagramPreview() {
           <span className="font-semibold">marketking.co</span>{" "}
           🚀 The future of social media is here. Introducing Marketectify AI Scheduler — your all-in-one command center for automated content!
         </p>
-        <p className="text-xs text-blue-600 mt-1.5">#AIMarketing #SocialMediaTools #ContentAutomation #MarketectifyAI</p>
+        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1.5">#AIMarketing #SocialMediaTools #ContentAutomation #MarketectifyAI</p>
         <p className="text-[10px] text-slate-500 mt-2">View all 1,247 comments</p>
       </div>
     </div>
@@ -335,7 +335,7 @@ function InstagramPreview() {
 function TikTokPreview() {
   return (
     <div className="max-w-sm mx-auto rounded-2xl overflow-hidden bg-black border border-slate-200/50 aspect-[9/16] relative animate-fade-in">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-700 via-sky-700 to-slate-900" />
+      <div className="absolute inset-0 bg-blue-800" />
       <div className="absolute inset-0 bg-black/20" />
 
       {/* Content */}
@@ -349,15 +349,15 @@ function TikTokPreview() {
 
         {/* Right side actions */}
         <div className="absolute right-2 bottom-20 flex flex-col items-center gap-4">
-          <div className="w-11 h-11 rounded-full bg-slate-100/80 flex items-center justify-center">
+          <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center">
             <Heart className="w-6 h-6 text-white" fill="white" />
           </div>
           <span className="text-[10px] text-white font-medium">89.2K</span>
-          <div className="w-11 h-11 rounded-full bg-slate-100/80 flex items-center justify-center">
+          <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center">
             <MessageCircle className="w-6 h-6 text-white" />
           </div>
           <span className="text-[10px] text-white font-medium">1,247</span>
-          <div className="w-11 h-11 rounded-full bg-slate-100/80 flex items-center justify-center">
+          <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center">
             <Bookmark className="w-6 h-6 text-white" />
           </div>
         </div>
@@ -378,9 +378,9 @@ function TikTokPreview() {
 
 function YouTubePreview() {
   return (
-    <div className="max-w-sm mx-auto rounded-2xl overflow-hidden bg-white border border-slate-200/50 animate-fade-in">
+    <div className="max-w-sm mx-auto rounded-2xl overflow-hidden bg-surface border border-slate-200/50 animate-fade-in">
       {/* Video area */}
-      <div className="aspect-[16/9] bg-gradient-to-br from-red-600 via-rose-600 to-slate-900 relative flex items-center justify-center">
+      <div className="aspect-[16/9] bg-blue-700 relative flex items-center justify-center">
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative text-center px-6">
           <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-2">
@@ -401,21 +401,21 @@ function YouTubePreview() {
           <span>3 days ago</span>
         </div>
         <div className="flex items-center gap-2.5 pt-2 border-t border-slate-200">
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-500 to-rose-500 flex items-center justify-center text-xs font-bold text-white">
+          <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
             MK
           </div>
           <div className="flex-1">
             <p className="text-xs font-semibold text-slate-900">MarketKing Co.</p>
             <p className="text-[10px] text-slate-500">124K subscribers</p>
           </div>
-          <button className="px-3 py-1.5 rounded-full bg-white text-xs font-bold text-black">Subscribe</button>
+          <button className="px-3 py-1.5 rounded-full bg-slate-900 text-xs font-bold text-surface">Subscribe</button>
         </div>
         <p className="text-xs text-slate-600 pt-1">
           Introducing Marketectify AI Scheduler — create, schedule, and optimize content across 4 platforms automatically. Start your free trial today!
         </p>
         <div className="flex flex-wrap gap-1.5 pt-1">
           {["#AI", "#SocialMedia", "#SaaS", "#ContentCreation"].map((tag) => (
-            <span key={tag} className="text-[10px] text-blue-600 font-medium">{tag}</span>
+            <span key={tag} className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">{tag}</span>
           ))}
         </div>
       </div>

@@ -29,7 +29,7 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 lg:hidden backdrop-blur-sm"
           onClick={onClose}
         />
       )}
@@ -43,12 +43,12 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
           {/* Logo */}
           <div className="px-6 py-5 border-b border-slate-200/80">
             <div className="flex items-center gap-3">
-              <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-sky-600 flex items-center justify-center glow-blue">
+              <div className="relative w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center glow-blue">
                 <Zap className="w-5 h-5 text-white" fill="white" />
               </div>
               <div>
                 <h1 className="text-lg font-bold text-slate-900 leading-tight">Marketectify</h1>
-                <p className="text-[10px] text-blue-600 font-medium tracking-wider uppercase">AI Social Agent</p>
+                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium tracking-wider uppercase">AI Social Agent</p>
               </div>
             </div>
           </div>
@@ -67,13 +67,13 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
                   }}
                   className={`w-full group flex items-start gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-left ${
                     active
-                      ? "bg-gradient-to-r from-blue-500/20 to-sky-500/10 border border-blue-500/30 glow-blue"
+                      ? "bg-blue-500/10 border border-blue-500/30"
                       : "hover:bg-slate-100/50 border border-transparent"
                   }`}
                 >
                   <Icon
                     className={`w-5 h-5 mt-0.5 shrink-0 transition-colors ${
-                      active ? "text-blue-600" : "text-slate-600 group-hover:text-slate-800"
+                      active ? "text-blue-600 dark:text-blue-400" : "text-slate-600 group-hover:text-slate-800"
                     }`}
                   />
                   <div className="min-w-0">
@@ -100,10 +100,10 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
               </div>
               <div className="flex items-center justify-between text-[11px] text-slate-500">
                 <span>GPT-4o · Gemini Pro</span>
-                <span className="text-emerald-400 font-medium">Active</span>
+                <span className="text-emerald-700 dark:text-emerald-400 font-medium">Active</span>
               </div>
-              <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                <div className="h-full w-[78%] rounded-full bg-gradient-to-r from-blue-500 to-sky-500" />
+              <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                <div className="h-full w-[78%] rounded-full bg-blue-500" />
               </div>
               <p className="text-[10px] text-slate-500">Monthly AI credits: 7,800 / 10,000</p>
             </div>

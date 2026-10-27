@@ -36,9 +36,9 @@ const platformIcons: Record<Platform, IconType> = {
 };
 
 const statusConfig: Record<PostStatus, { label: string; dot: string; badge: string; icon: typeof Clock3 }> = {
-  pending: { label: "Pending Approval", dot: "bg-amber-400", badge: "bg-amber-500/15 text-amber-400 border-amber-500/30", icon: AlertCircle },
-  approved: { label: "Approved & Scheduled", dot: "bg-emerald-400", badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },
-  published: { label: "Auto-Published", dot: "bg-blue-400", badge: "bg-blue-500/15 text-blue-600 border-blue-500/30", icon: CheckCircle2 },
+  pending: { label: "Pending Approval", dot: "bg-amber-400", badge: "bg-amber-500/15 text-amber-800 dark:text-amber-400 border-amber-500/30", icon: AlertCircle },
+  approved: { label: "Approved & Scheduled", dot: "bg-emerald-400", badge: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },
+  published: { label: "Auto-Published", dot: "bg-blue-400", badge: "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30", icon: CheckCircle2 },
 };
 
 const daysInMonth = 31;
@@ -74,7 +74,7 @@ export default function Calendar() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <CalendarDays className="w-6 h-6 text-blue-600" />
+            <CalendarDays className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             Content Calendar & Approval Center
           </h2>
           <p className="text-sm text-slate-600 mt-1">Review, approve, and schedule posts across all platforms.</p>
@@ -85,7 +85,7 @@ export default function Calendar() {
           <button
             onClick={() => setView("month")}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              view === "month" ? "bg-blue-500/20 text-blue-700 border border-blue-500/30" : "text-slate-600 hover:text-slate-800"
+              view === "month" ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30" : "text-slate-600 hover:text-slate-800"
             }`}
           >
             Month
@@ -93,7 +93,7 @@ export default function Calendar() {
           <button
             onClick={() => setView("week")}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              view === "week" ? "bg-blue-500/20 text-blue-700 border border-blue-500/30" : "text-slate-600 hover:text-slate-800"
+              view === "week" ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30" : "text-slate-600 hover:text-slate-800"
             }`}
           >
             Week
@@ -168,7 +168,7 @@ export default function Calendar() {
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className={`text-xs font-semibold ${isToday ? "text-blue-700" : "text-slate-600"}`}>
+                  <span className={`text-xs font-semibold ${isToday ? "text-blue-700 dark:text-blue-300" : "text-slate-600"}`}>
                     {day}
                   </span>
                   {dayPosts.length > 0 && (
@@ -184,13 +184,13 @@ export default function Calendar() {
                       <button
                         key={post.id}
                         onClick={() => setSelectedPost(post)}
-                        className={`w-full text-left p-1.5 rounded-lg bg-gradient-to-r ${post.thumbnailGradient} hover:scale-[1.02] transition-transform group`}
+                        className={`w-full text-left p-1.5 rounded-lg ${post.thumbnailColor} hover:scale-[1.02] transition-transform group`}
                       >
                         <div className="flex items-center gap-1">
                           <span className={`w-1.5 h-1.5 rounded-full ${status.dot} shrink-0`} />
                           <p className="text-[10px] font-semibold text-white truncate">{post.title}</p>
                         </div>
-                        <p className="text-[9px] text-white/70 mt-0.5">{post.time}</p>
+                        <p className="text-[9px] text-white/90 mt-0.5">{post.time}</p>
                       </button>
                     );
                   })}
@@ -224,7 +224,7 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 bg-black/60 z-50 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 bg-black/40 dark:bg-black/60 z-50 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
 
@@ -245,7 +245,7 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
           </div>
 
           {/* Preview card */}
-          <div className={`relative aspect-video rounded-2xl bg-gradient-to-br ${post.thumbnailGradient} overflow-hidden flex items-center justify-center`}>
+          <div className={`relative aspect-video rounded-2xl ${post.thumbnailColor} overflow-hidden flex items-center justify-center`}>
             <div className="absolute inset-0 bg-black/15" />
             <div className="relative text-center px-6">
               <Video className="w-10 h-10 text-white/90 mx-auto mb-2" />
@@ -272,7 +272,7 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
             <p className="text-xs font-semibold text-slate-600 mb-2">Hashtags</p>
             <div className="flex flex-wrap gap-2">
               {post.hashtags.map((tag) => (
-                <span key={tag} className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 text-xs font-medium border border-blue-500/20">
+                <span key={tag} className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 text-xs font-medium border border-blue-500/20">
                   {tag}
                 </span>
               ))}
@@ -300,7 +300,7 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
                       <Icon className={`w-4 h-4 ${selected ? platformColors[p] : "text-slate-500"}`} />
                     </div>
                     <span className="text-sm font-medium">{platformLabels[p]}</span>
-                    {selected && <Check className="w-4 h-4 text-blue-600 ml-auto" />}
+                    {selected && <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 ml-auto" />}
                   </button>
                 );
               })}
@@ -309,7 +309,7 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
 
           {/* Scheduled time */}
           <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-100/40 border border-slate-200/40">
-            <Clock className="w-5 h-5 text-blue-600" />
+            <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             <div>
               <p className="text-xs text-slate-500">Scheduled for</p>
               <p className="text-sm font-semibold text-slate-900">{post.date}, 2026 · {post.time}</p>
@@ -319,7 +319,7 @@ function PostDrawer({ post, onClose }: { post: ScheduledPost; onClose: () => voi
           {/* Action buttons */}
           <div className="flex items-center gap-3 pt-2">
             {post.status !== "published" && (
-              <button className="flex-1 h-12 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-sm font-bold text-white hover:from-emerald-500 hover:to-teal-500 transition-all glow-emerald hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
+              <button className="flex-1 h-12 rounded-xl bg-emerald-700 text-sm font-bold text-white hover:bg-emerald-800 transition-all glow-emerald hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
                 <Check className="w-5 h-5" />
                 Approve & Schedule
               </button>

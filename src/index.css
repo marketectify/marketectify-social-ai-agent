@@ -2,6 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Theme tokens (space-separated RGB channels so Tailwind opacity works).
+  - Light theme: light blue page background + white cards.
+  - Dark theme: the `slate` scale is inverted, so existing classes such as
+    text-slate-900 / bg-slate-50 automatically flip with the theme.
+*/
+:root {
+  color-scheme: light;
+
+  --slate-50: 243 248 255;   /* page background (light blue) */
+  --slate-100: 232 241 253;
+  --slate-200: 214 230 251;  /* borders */
+  --slate-300: 184 208 240;
+  --slate-400: 128 153 187;
+  --slate-500: 82 107 140;
+  --slate-600: 64 88 122;
+  --slate-700: 45 69 104;
+  --slate-800: 28 48 78;
+  --slate-850: 22 40 66;
+  --slate-900: 15 32 56;     /* main text */
+  --slate-950: 8 20 38;
+
+  --surface: 255 255 255;    /* cards */
+  --glass-alpha: 0.96;
+  --glass-border: 214 230 251;
+  --tint-bg: 239 246 255;    /* soft blue panels */
+  --tint-border: 191 219 254;
+
+  --glow-blue: 0 4px 14px rgba(37, 99, 235, 0.18);
+  --glow-emerald: 0 4px 14px rgba(5, 150, 105, 0.18);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --slate-50: 9 14 26;       /* page background */
+  --slate-100: 17 25 42;
+  --slate-200: 30 41 64;     /* borders */
+  --slate-300: 51 65 93;
+  --slate-400: 100 116 145;
+  --slate-500: 139 153 178;
+  --slate-600: 167 179 200;
+  --slate-700: 199 209 225;
+  --slate-800: 226 232 242;
+  --slate-850: 236 241 248;
+  --slate-900: 241 245 250;  /* main text */
+  --slate-950: 248 250 253;
+
+  --surface: 15 23 40;       /* cards */
+  --glass-alpha: 0.9;
+  --glass-border: 30 41 64;
+  --tint-bg: 30 58 138;
+  --tint-border: 59 130 246;
+
+  --glow-blue: 0 0 20px rgba(59, 130, 246, 0.25), 0 0 40px rgba(59, 130, 246, 0.08);
+  --glow-emerald: 0 0 20px rgba(16, 185, 129, 0.25), 0 0 40px rgba(16, 185, 129, 0.08);
+}
+
 @layer base {
   * {
     @apply border-slate-200;
@@ -9,24 +67,30 @@
   body {
     @apply bg-slate-50 text-slate-900 antialiased;
     font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }
 
 @layer utilities {
   .glass {
-    @apply bg-white/90 backdrop-blur-xl border border-slate-200/80 shadow-sm;
+    background-color: rgb(var(--surface) / var(--glass-alpha));
+    border: 1px solid rgb(var(--glass-border) / 0.9);
+    @apply backdrop-blur-xl shadow-sm;
   }
   .glass-light {
-    @apply bg-blue-50/70 backdrop-blur-md border border-blue-100;
+    background-color: rgb(var(--tint-bg) / 0.7);
+    border: 1px solid rgb(var(--tint-border) / 0.45);
+    @apply backdrop-blur-md;
+  }
+  .dark .glass-light {
+    background-color: rgb(var(--tint-bg) / 0.25);
+    border-color: rgb(var(--tint-border) / 0.25);
   }
   .glow-blue {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2), 0 0 40px rgba(59, 130, 246, 0.08);
+    box-shadow: var(--glow-blue);
   }
   .glow-emerald {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.2), 0 0 40px rgba(16, 185, 129, 0.08);
-  }
-  .glow-blue {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2), 0 0 40px rgba(59, 130, 246, 0.08);
+    box-shadow: var(--glow-emerald);
   }
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
@@ -41,12 +105,9 @@
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     @apply bg-slate-400;
   }
-  .text-gradient {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-sky-500;
-  }
 }
 
 /* Custom select styling */
 select option {
-  @apply bg-white text-slate-900;
+  @apply bg-surface text-slate-900;
 }

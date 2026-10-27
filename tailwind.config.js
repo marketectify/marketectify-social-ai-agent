@@ -1,12 +1,30 @@
 /** @type {import('tailwindcss').Config} */
+
+// Every shade of `slate` (and `surface`) is a CSS variable, defined in
+// src/index.css for both the light and the dark theme. That is why the same
+// classes (bg-slate-50, text-slate-900, border-slate-200 ...) work in both themes.
+const withAlpha = (variable) => `rgb(var(${variable}) / <alpha-value>)`;
+
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
+        surface: withAlpha("--surface"),
         slate: {
-          850: "#172033",
-          950: "#0F172A",
+          50: withAlpha("--slate-50"),
+          100: withAlpha("--slate-100"),
+          200: withAlpha("--slate-200"),
+          300: withAlpha("--slate-300"),
+          400: withAlpha("--slate-400"),
+          500: withAlpha("--slate-500"),
+          600: withAlpha("--slate-600"),
+          700: withAlpha("--slate-700"),
+          800: withAlpha("--slate-800"),
+          850: withAlpha("--slate-850"),
+          900: withAlpha("--slate-900"),
+          950: withAlpha("--slate-950"),
         },
       },
       animation: {
