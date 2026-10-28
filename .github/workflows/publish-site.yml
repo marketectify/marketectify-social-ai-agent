@@ -28,6 +28,10 @@ jobs:
           cache: npm
 
       - name: Install and build
+        env:
+          # Public values (safe in the browser). Without them the site runs in demo mode.
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
         run: |
           npm ci
           npm run build

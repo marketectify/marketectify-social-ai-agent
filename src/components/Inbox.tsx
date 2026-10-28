@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import type { Platform, InboxMessage } from "../types";
 import { inboxMessages, platformLabels } from "../data";
+import DemoBadge from "./DemoBadge";
 
 function TikTokIcon({ className }: { className?: string }) {
   return (
@@ -71,6 +72,7 @@ export default function Inbox() {
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <InboxIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             Unified AI Inbox
+            <DemoBadge />
           </h2>
           <p className="text-sm text-slate-600 mt-1">
             All your DMs & comments in one stream · {unreadCount} unread
