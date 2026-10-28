@@ -7,19 +7,26 @@ export type TabId =
 
 export type Platform = "facebook" | "instagram" | "tiktok" | "youtube";
 
-export type PostStatus = "pending" | "approved" | "published";
+/**
+ * draft     – being written, not sent for approval yet
+ * pending   – waiting for approval
+ * approved  – approved and scheduled
+ * published – already posted
+ */
+export type PostStatus = "draft" | "pending" | "approved" | "published";
 
-export interface ScheduledPost {
+export interface Post {
   id: string;
   title: string;
   caption: string;
-  date: string;
-  time: string;
+  hashtags: string[];
   platforms: Platform[];
   status: PostStatus;
-  thumbnailColor: string;
-  hashtags: string[];
+  /** ISO timestamp, or null for an unscheduled draft */
+  scheduledAt: string | null;
 }
+
+export type PostInput = Omit<Post, "id">;
 
 export interface InboxMessage {
   id: string;
@@ -32,13 +39,4 @@ export interface InboxMessage {
   unread: boolean;
   type: "comment" | "dm";
   aiSuggestedReply?: string;
-}
-
-export interface StatCard {
-  label: string;
-  value: string;
-  trend: string;
-  trendUp: boolean;
-  icon: string;
-  accent: string;
 }

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { Platform } from "../types";
 import { engagementData, monthlyChartData, leadFunnelData, platformLabels } from "../data";
+import DemoBadge from "./DemoBadge";
 
 function TikTokIcon({ className }: { className?: string }) {
   return (
@@ -50,6 +51,7 @@ export default function Analytics() {
           <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
             Analytics & Lead Generation Reports
+            <DemoBadge />
           </h2>
           <p className="text-sm text-slate-600 mt-1">Multi-platform performance insights and AI-captured lead tracking.</p>
         </div>

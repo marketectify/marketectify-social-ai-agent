@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import type { TabId } from "./types";
 import Sidebar from "./components/Sidebar";
 import TopNav from "./components/TopNav";
@@ -7,12 +8,31 @@ import Studio from "./components/Studio";
 import Calendar from "./components/Calendar";
 import Inbox from "./components/Inbox";
 import Analytics from "./components/Analytics";
-import { useTheme } from "./theme";
+import Login, { SetNewPassword } from "./components/Login";
+import { useTheme, type Theme } from "./theme";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { PostsProvider } from "./context/PostsContext";
+import { ToastProvider } from "./context/ToastContext";
+import { supabase } from "./lib/supabase";
+import { createLocalPostsRepo, createSupabasePostsRepo, type PostsRepo } from "./lib/postsRepo";
 
-export default function App() {
+interface ThemeProps {
+  theme: Theme;
+  onToggleTheme: () => void;
+}
+
+function Splash() {
+  return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center" role="status" aria-label="Loading">
+      <Loader2 className="w-6 h-6 text-blue-600 dark:text-blue-400 animate-spin" />
+    </div>
+  );
+}
+
+function Dashboard({ theme, onToggleTheme }: ThemeProps) {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const { mode } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
@@ -30,7 +50,14 @@ export default function App() {
       />
 
       <div className="flex-1 min-w-0 flex flex-col relative">
-        <TopNav onMenuClick={() => setMobileSidebarOpen(true)} theme={theme} onToggleTheme={toggleTheme} />
+        <TopNav onMenuClick={() => setMobileSidebarOpen(true)} theme={theme} onToggleTheme={onToggleTheme} />
+
+        {mode === "demo" && (
+          <div className="px-4 lg:px-6 py-2 text-xs text-amber-900 dark:text-amber-300 bg-amber-500/10 border-b border-amber-500/30">
+            <strong className="font-semibold">Demo mode.</strong> Your posts are saved in this browser only. Connect
+            the database to enable accounts and sync.
+          </div>
+        )}
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
           {activeTab === "overview" && <Overview onNavigate={setActiveTab} />}
@@ -41,5 +68,72 @@ export default function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+function Gate({ theme, onToggleTheme }: ThemeProps) {
+  const { mode, ready, user, workspace, workspaceError, recovering, retryWorkspace, signOut } = useAuth();
+
+  const repo = useMemo<PostsRepo | null>(() => {
+    if (mode === "demo") {
+      let storage: Storage | null = null;
+      try {
+        storage = window.localStorage;
+      } catch {
+        storage = null; // blocked (private mode): keep data in memory only
+      }
+      return createLocalPostsRepo(storage);
+    }
+    return supabase && workspace ? createSupabasePostsRepo(supabase, workspace.id) : null;
+  }, [mode, workspace]);
+
+  if (!ready) return <Splash />;
+  if (!user) return <Login theme={theme} onToggleTheme={onToggleTheme} />;
+  if (recovering) return <SetNewPassword theme={theme} onToggleTheme={onToggleTheme} />;
+
+  if (workspaceError || !repo) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="glass rounded-2xl p-6 max-w-md text-center space-y-4" role="alert">
+          <h1 className="text-lg font-bold text-slate-900">We couldn't load your workspace</h1>
+          <p className="text-sm text-slate-600">
+            {workspaceError ?? "Something went wrong."} If you just set up the database, make sure the SQL setup
+            script has been run.
+          </p>
+          <div className="flex justify-center gap-3">
+            <button
+              onClick={retryWorkspace}
+              className="h-10 px-4 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Try again
+            </button>
+            <button
+              onClick={() => void signOut()}
+              className="h-10 px-4 rounded-xl border border-slate-200 text-sm font-medium hover:bg-slate-100"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    // `key` makes sure nothing from a previous account leaks into the next one.
+    <PostsProvider key={user.id + (workspace?.id ?? "")} repo={repo}>
+      <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
+    </PostsProvider>
+  );
+}
+
+export default function App() {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <ToastProvider>
+      <AuthProvider>
+        <Gate theme={theme} onToggleTheme={toggleTheme} />
+      </AuthProvider>
+    </ToastProvider>
   );
 }

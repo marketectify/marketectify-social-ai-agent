@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import type { Platform } from "../types";
 import { platformLabels } from "../data";
+import DemoBadge from "./DemoBadge";
 
 type PreviewPlatform = "instagram" | "tiktok" | "youtube";
 
@@ -56,6 +57,7 @@ export default function Studio() {
         <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           AI Content Creation Studio
+          <DemoBadge label="Preview" />
         </h2>
         <p className="text-sm text-slate-600 mt-1">Generate captions, scripts, and visuals powered by GPT-4o & Gemini Pro.</p>
       </div>
