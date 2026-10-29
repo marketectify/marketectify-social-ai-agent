@@ -11,11 +11,12 @@ Built with React, TypeScript, Vite and Tailwind CSS. Accounts and data use Supab
 - Content calendar with month and week views
 - Create, edit, approve, schedule and delete posts, saved per workspace
 - Dashboard numbers calculated from your real posts
+- AI Content Studio: captions, hashtags, reel scripts and visual ideas from Google Gemini (key stays on the server, daily limit per account)
 - Light and dark themes
 
 ## Still sample data (marked on screen)
 
-AI Content Studio, Unified Inbox and Analytics show example content. They are being
+Unified Inbox and Analytics show example content. They are being
 connected to real data step by step.
 
 ## Getting started

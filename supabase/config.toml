@@ -1,0 +1,8 @@
+# Used by the Supabase CLI when deploying functions (see .github/workflows/deploy-functions.yml).
+
+project_id = "marketectify-social-ai-agent"
+
+# The function checks the user's login itself (auth.getUser), which works with every
+# Supabase key type. The gateway-level JWT check is therefore switched off.
+[functions.generate-content]
+verify_jwt = false

@@ -21,20 +21,22 @@ interface PostEditorProps {
   post: Post | null;
   /** Day pre-selected when creating a post from the calendar. */
   defaultDate?: Date;
+  /** Values to pre-fill when creating a new post (for example from the AI Studio). */
+  initial?: Partial<Pick<PostInput, "title" | "caption" | "hashtags" | "platforms">>;
   onClose: () => void;
 }
 
-export default function PostEditor({ post, defaultDate, onClose }: PostEditorProps) {
+export default function PostEditor({ post, defaultDate, initial, onClose }: PostEditorProps) {
   const { createPost, updatePost, deletePost } = usePosts();
   const toast = useToast();
   const isNew = post === null;
   const status: PostStatus = post?.status ?? "draft";
   const locked = status === "published";
 
-  const [title, setTitle] = useState(post?.title ?? "");
-  const [caption, setCaption] = useState(post?.caption ?? "");
-  const [hashtagText, setHashtagText] = useState((post?.hashtags ?? []).join(" "));
-  const [platforms, setPlatforms] = useState<Platform[]>(post?.platforms ?? []);
+  const [title, setTitle] = useState(post?.title ?? initial?.title ?? "");
+  const [caption, setCaption] = useState(post?.caption ?? initial?.caption ?? "");
+  const [hashtagText, setHashtagText] = useState((post?.hashtags ?? initial?.hashtags ?? []).join(" "));
+  const [platforms, setPlatforms] = useState<Platform[]>(post?.platforms ?? initial?.platforms ?? []);
   const [schedule, setSchedule] = useState(
     post ? toLocalInputValue(post.scheduledAt) : defaultSchedule(defaultDate),
   );

@@ -1,204 +1,339 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
-  Sparkles,
-  Hash,
-  Video,
-  Image,
-  Wand2,
-  Heart,
-  MessageCircle,
-  Send,
+  AlertCircle,
   Bookmark,
-  MoreHorizontal,
-  Music,
   Check,
   ChevronDown,
+  Copy,
+  Hash,
+  Heart,
+  Image as ImageIcon,
+  Info,
   Loader2,
-  Facebook,
-  Instagram,
-  Youtube,
+  MessageCircle,
+  MoreHorizontal,
+  Plus,
+  RefreshCw,
+  Send,
+  Sparkles,
+  Video,
+  Wand2,
 } from "lucide-react";
 import type { Platform } from "../types";
 import { platformLabels } from "../data";
-import DemoBadge from "./DemoBadge";
+import { useAuth } from "../context/AuthContext";
+import { useToast } from "../context/ToastContext";
+import PostEditor from "./PostEditor";
+import {
+  AIError,
+  LANGUAGES,
+  LIMITS,
+  PLATFORM_FOCUS,
+  TONES,
+  generate,
+  type CaptionsResult,
+  type GenerateRequest,
+  type Generated,
+  type Kind,
+  type ScriptResult,
+  type VisualResult,
+} from "../lib/ai";
 
-type PreviewPlatform = "instagram" | "tiktok" | "youtube";
+const AUDIENCES = ["Small business owners", "Marketing agencies", "Content creators", "E-commerce brands", "Startups"];
 
-const tones = ["Engaging", "Professional", "Humorous", "Inspirational", "Bold"];
-const languages = ["English", "Spanish", "French", "German", "Hindi", "Portuguese"];
-const audiences = ["Small Business Owners", "Marketing Agencies", "Content Creators", "E-commerce Brands", "Startups"];
+const ENGINES: { kind: Kind; title: string; subtitle: string; icon: typeof Hash; color: string }[] = [
+  { kind: "captions", title: "Captions & hashtags", subtitle: "3 ready-to-post variations", icon: Hash, color: "bg-blue-600" },
+  { kind: "script", title: "Reel / short video script", subtitle: "Hook, scenes, voiceover and call to action", icon: Video, color: "bg-sky-700" },
+  { kind: "visual", title: "Visual ideas & image prompts", subtitle: "Concepts plus prompts for any image tool", icon: ImageIcon, color: "bg-indigo-600" },
+];
+
+type Results = Partial<Record<Kind, Generated>>;
 
 export default function Studio() {
-  const [prompt, setPrompt] = useState("");
-  const [tone, setTone] = useState("Engaging");
-  const [audience, setAudience] = useState("Small Business Owners");
-  const [language, setLanguage] = useState("English");
-  const [activePreview, setActivePreview] = useState<PreviewPlatform>("instagram");
+  const { mode, workspace } = useAuth();
+  const toast = useToast();
+  const brand = workspace?.name ?? "Your brand";
+  const demo = mode === "demo";
 
-  const [generatedCaptions, setGeneratedCaptions] = useState(false);
-  const [generatedScript, setGeneratedScript] = useState(false);
-  const [generatedVisual, setGeneratedVisual] = useState(false);
-  const [loading, setLoading] = useState<string | null>(null);
+  const [topic, setTopic] = useState("");
+  const [tone, setTone] = useState<GenerateRequest["tone"]>("Engaging");
+  const [audience, setAudience] = useState(AUDIENCES[0]);
+  const [language, setLanguage] = useState<GenerateRequest["language"]>("English");
+  const [platform, setPlatform] = useState<GenerateRequest["platform"]>("instagram");
 
-  const handleGenerate = (type: string) => {
-    setLoading(type);
-    setTimeout(() => {
+  const [results, setResults] = useState<Results>({});
+  const [loading, setLoading] = useState<Kind | null>(null);
+  const [errors, setErrors] = useState<Partial<Record<Kind, string>>>({});
+  const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
+  const [selected, setSelected] = useState(0);
+  const [editorInitial, setEditorInitial] = useState<null | { title: string; caption: string; hashtags: string[]; platforms: Platform[] }>(null);
+  const busy = useRef(false);
+
+  const topicOk = topic.trim().length >= LIMITS.topicMin;
+  const canGenerate = !demo && topicOk && !loading;
+
+  const run = async (kind: Kind) => {
+    if (busy.current) return;
+    busy.current = true;
+    setLoading(kind);
+    setErrors((e) => ({ ...e, [kind]: undefined }));
+    try {
+      const res = await generate({ kind, topic: topic.trim(), tone, audience: audience.trim() || "General audience", language, platform, brand });
+      setResults((r) => ({ ...r, [kind]: res }));
+      setUsage(res.usage);
+      if (kind === "captions") setSelected(0);
+    } catch (e) {
+      const message = e instanceof AIError ? e.message : "Something went wrong. Please try again.";
+      setErrors((prev) => ({ ...prev, [kind]: message }));
+    } finally {
+      busy.current = false;
       setLoading(null);
-      if (type === "captions") setGeneratedCaptions(true);
-      if (type === "script") setGeneratedScript(true);
-      if (type === "visual") setGeneratedVisual(true);
-    }, 1800);
+    }
   };
+
+  const captions = (results.captions?.result as CaptionsResult | undefined)?.captions ?? [];
+  const chosen = captions[Math.min(selected, Math.max(captions.length - 1, 0))];
+  const script = results.script?.result as ScriptResult | undefined;
+  const visual = results.visual?.result as VisualResult | undefined;
+
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied to clipboard");
+    } catch {
+      toast.error("Could not copy. Select the text and copy it manually.");
+    }
+  };
+
+  const createPost = (caption: string, hashtags: string[]) =>
+    setEditorInitial({
+      title: topic.trim().slice(0, 80),
+      caption,
+      hashtags,
+      platforms: [platform] as Platform[],
+    });
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
           <Sparkles className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-          AI Content Creation Studio
-          <DemoBadge label="Preview" />
+          AI Content Studio
         </h2>
-        <p className="text-sm text-slate-600 mt-1">Generate captions, scripts, and visuals powered by GPT-4o & Gemini Pro.</p>
+        <p className="text-sm text-slate-600 mt-1">
+          Describe your idea once. Get captions, a video script and visual ideas written for your brand, in your language.
+        </p>
       </div>
 
+      {demo && (
+        <div role="status" className="flex gap-2 items-start text-sm text-amber-900 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
+          <Info className="w-4 h-4 mt-0.5 shrink-0" />
+          <p>
+            AI generation is switched off in demo mode because it needs a signed-in account. Connect the database and the
+            Gemini key (see <code>docs/SETUP.md</code>) to turn it on.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Left: Prompt & Generation Controls */}
         <div className="space-y-5">
-          {/* Prompt input */}
           <div className="glass rounded-2xl p-5 space-y-4">
             <div>
-              <label className="text-sm font-semibold text-slate-900 mb-2 block">Topic / Prompt</label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="studio-topic" className="text-sm font-semibold text-slate-900">
+                  What is the post about?
+                </label>
+                <span className={`text-xs ${topic.length > LIMITS.topicMax ? "text-red-600" : "text-slate-500"}`}>
+                  {topic.length}/{LIMITS.topicMax}
+                </span>
+              </div>
               <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="e.g., Launch announcement for our new AI-powered social media scheduling feature..."
+                id="studio-topic"
+                value={topic}
+                maxLength={LIMITS.topicMax}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="e.g. Launching our new summer collection with 20% off for the first 48 hours"
                 rows={3}
                 className="w-full px-4 py-3 rounded-xl bg-slate-100/50 border border-slate-200/50 text-sm text-slate-800 placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
               />
             </div>
 
-            {/* Parameters */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <SelectField label="Tone" value={tone} options={tones} onChange={setTone} />
-              <SelectField label="Target Audience" value={audience} options={audiences} onChange={setAudience} />
-              <SelectField label="Language" value={language} options={languages} onChange={setLanguage} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <SelectField label="Tone" value={tone} options={TONES} onChange={(v) => setTone(v as typeof tone)} />
+              <SelectField label="Language" value={language} options={LANGUAGES} onChange={(v) => setLanguage(v as typeof language)} />
+              <SelectField
+                label="Main platform"
+                value={platform}
+                options={PLATFORM_FOCUS}
+                labels={platformLabels as Record<string, string>}
+                onChange={(v) => setPlatform(v as typeof platform)}
+              />
+              <div>
+                <label htmlFor="studio-audience" className="text-xs font-medium text-slate-600 mb-1.5 block">
+                  Target audience
+                </label>
+                <input
+                  id="studio-audience"
+                  list="studio-audiences"
+                  value={audience}
+                  maxLength={LIMITS.audienceMax}
+                  onChange={(e) => setAudience(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl bg-slate-100/50 border border-slate-200/50 text-sm text-slate-800 focus:outline-none focus:border-blue-500/50 transition-all"
+                />
+                <datalist id="studio-audiences">
+                  {AUDIENCES.map((a) => (
+                    <option key={a} value={a} />
+                  ))}
+                </datalist>
+              </div>
             </div>
+            <p className="text-xs text-slate-500">
+              Written for <strong className="font-semibold text-slate-700">{brand}</strong>.
+              {usage && (
+                <>
+                  {" "}
+                  Used {usage.used} of {usage.limit} generations today.
+                </>
+              )}
+            </p>
           </div>
 
-          {/* AI Engine buttons */}
           <div className="glass rounded-2xl p-5 space-y-3">
             <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
               <Wand2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              AI Generation Engines
+              Generate
             </h3>
-
-            <GenerateButton
-              icon={Hash}
-              title="Generate Captions & Hashtags"
-              subtitle="Powered by GPT-4o"
-              color="bg-blue-600"
-              loading={loading === "captions"}
-              done={generatedCaptions}
-              onClick={() => handleGenerate("captions")}
-            />
-            <GenerateButton
-              icon={Video}
-              title="Generate Reel / Short Video Script & Voiceover"
-              subtitle="Powered by Gemini Pro"
-              color="bg-sky-700"
-              loading={loading === "script"}
-              done={generatedScript}
-              onClick={() => handleGenerate("script")}
-            />
-            <GenerateButton
-              icon={Image}
-              title="Generate Visual Media / Graphics"
-              subtitle="Powered by DALL·E 3"
-              color="bg-indigo-600"
-              loading={loading === "visual"}
-              done={generatedVisual}
-              onClick={() => handleGenerate("visual")}
-            />
+            {!demo && !topicOk && <p className="text-xs text-slate-500">Write at least {LIMITS.topicMin} characters about the post to begin.</p>}
+            {ENGINES.map((en) => (
+              <EngineButton
+                key={en.kind}
+                {...en}
+                loading={loading === en.kind}
+                done={Boolean(results[en.kind])}
+                disabled={!canGenerate}
+                onClick={() => run(en.kind)}
+              />
+            ))}
           </div>
 
-          {/* Output panels */}
-          {(generatedCaptions || generatedScript || generatedVisual) && (
-            <div className="space-y-4 animate-slide-in">
-              {generatedCaptions && (
-                <OutputCard title="Generated Captions & Hashtags" icon={Hash}>
-                  <p className="text-sm text-slate-800 leading-relaxed">
-                    🚀 The future of social media is here. Introducing Marketectify AI Scheduler — your all-in-one
-                    command center for automated content across every platform. Schedule once, publish everywhere.
-                    Never miss a beat again! ✨
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {["#AIMarketing", "#SocialMediaTools", "#ContentAutomation", "#MarketectifyAI", "#GrowthHacking", "#SaaS"].map((tag) => (
-                      <span key={tag} className="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 text-xs font-medium border border-blue-500/20">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </OutputCard>
-              )}
+          <div className="space-y-4" aria-live="polite">
+            {(Object.keys(errors) as Kind[]).map((k) =>
+              errors[k] ? (
+                <div key={k} role="alert" className="flex gap-2 items-start text-sm text-red-800 dark:text-red-300 bg-red-500/10 border border-red-500/30 rounded-xl p-3">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <p className="flex-1">{errors[k]}</p>
+                  <button onClick={() => run(k)} disabled={!canGenerate} className="text-xs font-semibold underline disabled:opacity-50">
+                    Try again
+                  </button>
+                </div>
+              ) : null,
+            )}
 
-              {generatedScript && (
-                <OutputCard title="Reel Script & Voiceover" icon={Video}>
-                  <div className="space-y-2 text-sm text-slate-800">
-                    <p><span className="text-blue-600 dark:text-blue-400 font-semibold">[0:00-0:03]</span> Hook: "What if your social media ran itself?" (Voiceover: energetic, curious tone)</p>
-                    <p><span className="text-blue-600 dark:text-blue-400 font-semibold">[0:03-0:08]</span> Visual: Quick montage of dashboards, calendar auto-filling, analytics climbing.</p>
-                    <p><span className="text-blue-600 dark:text-blue-400 font-semibold">[0:08-0:15]</span> Narration: "Marketectify AI creates, schedules, and optimizes content across 4 platforms — automatically."</p>
-                    <p><span className="text-blue-600 dark:text-blue-400 font-semibold">[0:15-0:25]</span> CTA: "Start your free trial today. Link in bio." (Upbeat music fade-out)</p>
-                  </div>
-                </OutputCard>
-              )}
+            {captions.length > 0 && (
+              <OutputCard title="Captions & hashtags" icon={Hash} onRegenerate={() => run("captions")} disabled={!canGenerate} regenerating={loading === "captions"}>
+                <div className="space-y-3">
+                  {captions.map((c, i) => (
+                    <div
+                      key={i}
+                      className={`rounded-xl border p-3 transition-colors ${i === selected ? "border-blue-500/60 bg-blue-500/5" : "border-slate-200/60"}`}
+                    >
+                      <p className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">{c.text}</p>
+                      {c.hashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {c.hashtags.map((t) => (
+                            <span key={t} className="px-2 py-0.5 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300 text-xs font-medium border border-blue-500/20">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        <SmallButton onClick={() => setSelected(i)} active={i === selected}>
+                          {i === selected ? "Shown in preview" : "Preview"}
+                        </SmallButton>
+                        <SmallButton onClick={() => copy(`${c.text}\n\n${c.hashtags.join(" ")}`.trim())} icon={Copy}>
+                          Copy
+                        </SmallButton>
+                        <SmallButton onClick={() => createPost(c.text, c.hashtags)} icon={Plus} primary>
+                          Create post
+                        </SmallButton>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </OutputCard>
+            )}
 
-              {generatedVisual && (
-                <OutputCard title="Generated Visual Media" icon={Image}>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="aspect-square rounded-xl bg-blue-600 flex items-center justify-center relative overflow-hidden">
-                      <div className="absolute inset-0 bg-black/20" />
-                      <p className="relative text-white font-bold text-sm text-center px-4">AI-Generated Hero Graphic</p>
+            {script && (
+              <OutputCard title={`Reel script (~${script.durationSeconds}s)`} icon={Video} onRegenerate={() => run("script")} disabled={!canGenerate} regenerating={loading === "script"}>
+                <div className="space-y-2 text-sm text-slate-800">
+                  <p><span className="font-semibold text-blue-700 dark:text-blue-300">Hook:</span> {script.hook}</p>
+                  {script.scenes.map((s, i) => (
+                    <div key={i} className="rounded-lg border border-slate-200/60 p-2.5">
+                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">{s.time}</p>
+                      <p><span className="font-medium">Visual:</span> {s.visual}</p>
+                      <p><span className="font-medium">Voiceover:</span> {s.voiceover}</p>
                     </div>
-                    <div className="aspect-square rounded-xl bg-indigo-600 flex items-center justify-center relative overflow-hidden">
-                      <div className="absolute inset-0 bg-black/20" />
-                      <p className="relative text-white font-bold text-sm text-center px-4">Story Template Variant</p>
+                  ))}
+                  <p><span className="font-semibold text-blue-700 dark:text-blue-300">Call to action:</span> {script.cta}</p>
+                  {script.musicMood && <p className="text-xs text-slate-600">Music: {script.musicMood}</p>}
+                </div>
+                <div className="mt-3">
+                  <SmallButton
+                    icon={Copy}
+                    onClick={() =>
+                      copy(
+                        [`Hook: ${script.hook}`, ...script.scenes.map((s) => `[${s.time}] ${s.visual}\nVoiceover: ${s.voiceover}`), `CTA: ${script.cta}`].join("\n\n"),
+                      )
+                    }
+                  >
+                    Copy script
+                  </SmallButton>
+                </div>
+              </OutputCard>
+            )}
+
+            {visual && (
+              <OutputCard title="Visual ideas" icon={ImageIcon} onRegenerate={() => run("visual")} disabled={!canGenerate} regenerating={loading === "visual"}>
+                <div className="space-y-3">
+                  {visual.ideas.map((v, i) => (
+                    <div key={i} className="rounded-xl border border-slate-200/60 p-3 text-sm text-slate-800">
+                      <p className="font-semibold text-slate-900">{v.title}</p>
+                      <p className="mt-1">{v.description}</p>
+                      {v.imagePrompt && (
+                        <p className="mt-2 text-xs text-slate-600 bg-slate-100/60 rounded-lg p-2">
+                          <span className="font-semibold">Image prompt:</span> {v.imagePrompt}
+                        </p>
+                      )}
+                      {v.imagePrompt && (
+                        <div className="mt-2">
+                          <SmallButton icon={Copy} onClick={() => copy(v.imagePrompt)}>
+                            Copy prompt
+                          </SmallButton>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                </OutputCard>
-              )}
-            </div>
-          )}
+                  ))}
+                </div>
+              </OutputCard>
+            )}
+          </div>
         </div>
 
-        {/* Right: Live Preview */}
         <div className="xl:sticky xl:top-24 self-start">
           <div className="glass rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-slate-900">Live Preview</h3>
-              <div className="flex items-center gap-1.5">
-                {(["instagram", "tiktok", "youtube"] as PreviewPlatform[]).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setActivePreview(p)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      activePreview === p
-                        ? "bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/30"
-                        : "text-slate-600 hover:text-slate-800 border border-transparent"
-                    }`}
-                  >
-                    {platformLabels[p]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {activePreview === "instagram" && <InstagramPreview />}
-            {activePreview === "tiktok" && <TikTokPreview />}
-            {activePreview === "youtube" && <YouTubePreview />}
+            <h3 className="text-sm font-semibold text-slate-900 mb-4">Live preview</h3>
+            <PostPreview
+              brand={brand}
+              caption={chosen?.text ?? ""}
+              hashtags={chosen?.hashtags ?? []}
+              headline={script?.hook ?? visual?.ideas[0]?.title ?? (topic.trim() || "Your idea appears here")}
+            />
           </div>
         </div>
       </div>
+
+      {editorInitial && <PostEditor post={null} initial={editorInitial} onClose={() => setEditorInitial(null)} />}
     </div>
   );
 }
@@ -207,24 +342,32 @@ function SelectField({
   label,
   value,
   options,
+  labels,
   onChange,
 }: {
   label: string;
   value: string;
-  options: string[];
+  options: readonly string[];
+  labels?: Record<string, string>;
   onChange: (v: string) => void;
 }) {
+  const id = `studio-${label.toLowerCase().replace(/\s+/g, "-")}`;
   return (
     <div>
-      <label className="text-xs font-medium text-slate-600 mb-1.5 block">{label}</label>
+      <label htmlFor={id} className="text-xs font-medium text-slate-600 mb-1.5 block">
+        {label}
+      </label>
       <div className="relative">
         <select
+          id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="w-full h-10 px-3 pr-8 rounded-xl bg-slate-100/50 border border-slate-200/50 text-sm text-slate-800 focus:outline-none focus:border-blue-500/50 transition-all appearance-none cursor-pointer"
         >
           {options.map((opt) => (
-            <option key={opt} value={opt}>{opt}</option>
+            <option key={opt} value={opt}>
+              {labels?.[opt] ?? opt}
+            </option>
           ))}
         </select>
         <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
@@ -233,13 +376,14 @@ function SelectField({
   );
 }
 
-function GenerateButton({
+function EngineButton({
   icon: Icon,
   title,
   subtitle,
   color,
   loading,
   done,
+  disabled,
   onClick,
 }: {
   icon: typeof Hash;
@@ -248,178 +392,124 @@ function GenerateButton({
   color: string;
   loading: boolean;
   done: boolean;
+  disabled: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      disabled={loading}
-      className="w-full group flex items-center gap-3 p-3.5 rounded-xl glass-light hover:border-slate-300 transition-all hover:scale-[1.01] active:scale-[0.99] text-left disabled:opacity-60"
+      disabled={disabled}
+      aria-busy={loading}
+      className="w-full flex items-center gap-3 p-3.5 rounded-xl glass-light hover:border-slate-300 transition-all text-left disabled:opacity-60 disabled:cursor-not-allowed"
     >
       <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center shrink-0`}>
-        {loading ? (
-          <Loader2 className="w-5 h-5 text-white animate-spin" />
-        ) : done ? (
-          <Check className="w-5 h-5 text-white" />
-        ) : (
-          <Icon className="w-5 h-5 text-white" />
-        )}
+        {loading ? <Loader2 className="w-5 h-5 text-white animate-spin" /> : done ? <Check className="w-5 h-5 text-white" /> : <Icon className="w-5 h-5 text-white" />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-900">{title}</p>
-        <p className="text-[11px] text-slate-500">{loading ? "Generating..." : done ? "Generated ✓ — click to regenerate" : subtitle}</p>
+        <p className="text-[11px] text-slate-500">{loading ? "Writing…" : done ? "Done. Click to generate again" : subtitle}</p>
       </div>
-      {done && <Check className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />}
     </button>
   );
 }
 
-function OutputCard({ title, icon: Icon, children }: { title: string; icon: typeof Hash; children: React.ReactNode }) {
+function SmallButton({
+  children,
+  onClick,
+  icon: Icon,
+  primary,
+  active,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  icon?: typeof Copy;
+  primary?: boolean;
+  active?: boolean;
+}) {
+  const style = primary
+    ? "bg-blue-600 text-white border-blue-600 hover:bg-blue-700"
+    : active
+      ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30"
+      : "text-slate-700 border-slate-200/70 hover:bg-slate-100/60";
   return (
-    <div className="glass rounded-2xl p-5">
-      <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2 mb-3">
-        <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-        {title}
-      </h4>
+    <button onClick={onClick} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${style}`}>
+      {Icon && <Icon className="w-3.5 h-3.5" />}
+      {children}
+    </button>
+  );
+}
+
+function OutputCard({
+  title,
+  icon: Icon,
+  children,
+  onRegenerate,
+  disabled,
+  regenerating,
+}: {
+  title: string;
+  icon: typeof Hash;
+  children: React.ReactNode;
+  onRegenerate: () => void;
+  disabled: boolean;
+  regenerating: boolean;
+}) {
+  return (
+    <div className="glass rounded-2xl p-5 animate-slide-in">
+      <div className="flex items-center justify-between mb-3">
+        <h4 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+          <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          {title}
+        </h4>
+        <button
+          onClick={onRegenerate}
+          disabled={disabled}
+          className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${regenerating ? "animate-spin" : ""}`} />
+          Regenerate
+        </button>
+      </div>
       {children}
     </div>
   );
 }
 
-function InstagramPreview() {
+function PostPreview({ brand, caption, hashtags, headline }: { brand: string; caption: string; hashtags: string[]; headline: string }) {
+  const initials = brand
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
   return (
-    <div className="max-w-sm mx-auto rounded-2xl overflow-hidden bg-surface border border-slate-200/50 animate-fade-in">
-      {/* Header */}
+    <div className="max-w-sm mx-auto rounded-2xl overflow-hidden bg-surface border border-slate-200/50">
       <div className="flex items-center gap-2.5 p-3">
-        <div className="w-9 h-9 rounded-full bg-pink-500 p-0.5">
-          <div className="w-full h-full rounded-full bg-surface flex items-center justify-center text-xs font-bold text-slate-900">
-            MK
-          </div>
-        </div>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-slate-900">marketking.co</p>
-          <p className="text-[10px] text-slate-500">Sponsored</p>
-        </div>
+        <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">{initials || "M"}</div>
+        <p className="flex-1 text-sm font-semibold text-slate-900 truncate">{brand}</p>
         <MoreHorizontal className="w-5 h-5 text-slate-600" />
       </div>
-
-      {/* Image */}
       <div className="aspect-[4/5] bg-blue-600 relative flex items-center justify-center">
         <div className="absolute inset-0 bg-black/10" />
-        <div className="relative text-center px-6">
-          <Sparkles className="w-10 h-10 text-white/90 mx-auto mb-3" />
-          <p className="text-white font-bold text-lg">The Future of Social Media is Here</p>
-          <p className="text-white/90 text-sm mt-1">Marketectify AI Scheduler</p>
-        </div>
+        <p className="relative text-white font-bold text-lg text-center px-6 break-words">{headline}</p>
       </div>
-
-      {/* Actions */}
       <div className="flex items-center gap-4 p-3">
-        <Heart className="w-6 h-6 text-red-600 dark:text-red-400" fill="currentColor" />
+        <Heart className="w-6 h-6 text-slate-700" />
         <MessageCircle className="w-6 h-6 text-slate-700" />
         <Send className="w-6 h-6 text-slate-700" />
         <Bookmark className="w-6 h-6 text-slate-700 ml-auto" />
       </div>
-
-      {/* Caption */}
-      <div className="px-3 pb-4">
-        <p className="text-sm text-slate-900">
-          <span className="font-semibold">marketking.co</span>{" "}
-          🚀 The future of social media is here. Introducing Marketectify AI Scheduler — your all-in-one command center for automated content!
-        </p>
-        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1.5">#AIMarketing #SocialMediaTools #ContentAutomation #MarketectifyAI</p>
-        <p className="text-[10px] text-slate-500 mt-2">View all 1,247 comments</p>
-      </div>
-    </div>
-  );
-}
-
-function TikTokPreview() {
-  return (
-    <div className="max-w-sm mx-auto rounded-2xl overflow-hidden bg-black border border-slate-200/50 aspect-[9/16] relative animate-fade-in">
-      <div className="absolute inset-0 bg-blue-800" />
-      <div className="absolute inset-0 bg-black/20" />
-
-      {/* Content */}
-      <div className="relative h-full flex flex-col">
-        <div className="flex-1 flex items-center justify-center px-6">
-          <div className="text-center">
-            <Sparkles className="w-12 h-12 text-white/90 mx-auto mb-3" />
-            <p className="text-white font-bold text-xl">What if your social media ran itself?</p>
-          </div>
-        </div>
-
-        {/* Right side actions */}
-        <div className="absolute right-2 bottom-20 flex flex-col items-center gap-4">
-          <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center">
-            <Heart className="w-6 h-6 text-white" fill="white" />
-          </div>
-          <span className="text-[10px] text-white font-medium">89.2K</span>
-          <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center">
-            <MessageCircle className="w-6 h-6 text-white" />
-          </div>
-          <span className="text-[10px] text-white font-medium">1,247</span>
-          <div className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center">
-            <Bookmark className="w-6 h-6 text-white" />
-          </div>
-        </div>
-
-        {/* Bottom info */}
-        <div className="absolute left-3 right-16 bottom-4">
-          <p className="text-sm font-bold text-white">marketking.co</p>
-          <p className="text-xs text-white/80 mt-1">🚀 The future of social media is here. Marketectify AI Scheduler — all-in-one automation! #AI #SocialMedia</p>
-          <div className="flex items-center gap-1.5 mt-2">
-            <Music className="w-3 h-3 text-white" />
-            <p className="text-[10px] text-white/70">Original Sound — Marketectify AI</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function YouTubePreview() {
-  return (
-    <div className="max-w-sm mx-auto rounded-2xl overflow-hidden bg-surface border border-slate-200/50 animate-fade-in">
-      {/* Video area */}
-      <div className="aspect-[16/9] bg-blue-700 relative flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/20" />
-        <div className="relative text-center px-6">
-          <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-2">
-            <div className="w-0 h-0 border-l-[12px] border-l-white border-y-[8px] border-y-transparent ml-1" />
-          </div>
-          <p className="text-white font-bold text-sm">AI Scheduler Launch — 0:25</p>
-        </div>
-      </div>
-
-      {/* Info */}
-      <div className="p-3 space-y-2">
-        <p className="text-sm font-bold text-slate-900 leading-tight">
-          🚀 The Future of Social Media: Marketectify AI Scheduler Launch
-        </p>
-        <div className="flex items-center gap-2 text-[11px] text-slate-500">
-          <span>1.2M views</span>
-          <span>·</span>
-          <span>3 days ago</span>
-        </div>
-        <div className="flex items-center gap-2.5 pt-2 border-t border-slate-200">
-          <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
-            MK
-          </div>
-          <div className="flex-1">
-            <p className="text-xs font-semibold text-slate-900">MarketKing Co.</p>
-            <p className="text-[10px] text-slate-500">124K subscribers</p>
-          </div>
-          <button className="px-3 py-1.5 rounded-full bg-slate-900 text-xs font-bold text-surface">Subscribe</button>
-        </div>
-        <p className="text-xs text-slate-600 pt-1">
-          Introducing Marketectify AI Scheduler — create, schedule, and optimize content across 4 platforms automatically. Start your free trial today!
-        </p>
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {["#AI", "#SocialMedia", "#SaaS", "#ContentCreation"].map((tag) => (
-            <span key={tag} className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">{tag}</span>
-          ))}
-        </div>
+      <div className="px-3 pb-4 min-h-[3.5rem]">
+        {caption ? (
+          <>
+            <p className="text-sm text-slate-900 whitespace-pre-wrap break-words">
+              <span className="font-semibold">{brand}</span> {caption}
+            </p>
+            {hashtags.length > 0 && <p className="text-xs text-blue-600 dark:text-blue-400 mt-1.5 break-words">{hashtags.join(" ")}</p>}
+          </>
+        ) : (
+          <p className="text-sm text-slate-500">Generate captions and pick one to see it here.</p>
+        )}
       </div>
     </div>
   );

@@ -61,7 +61,10 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1600px] w-full mx-auto">
           {activeTab === "overview" && <Overview onNavigate={setActiveTab} />}
-          {activeTab === "studio" && <Studio />}
+          {/* Kept mounted (just hidden) so generated results survive tab switches. */}
+          <div hidden={activeTab !== "studio"}>
+            <Studio />
+          </div>
           {activeTab === "calendar" && <Calendar />}
           {activeTab === "inbox" && <Inbox />}
           {activeTab === "analytics" && <Analytics />}

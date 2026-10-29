@@ -17,7 +17,7 @@ interface SidebarProps {
 
 const navItems: { id: TabId; label: string; icon: typeof LayoutDashboard; description: string }[] = [
   { id: "overview", label: "Dashboard", icon: LayoutDashboard, description: "Key metrics & quick actions" },
-  { id: "studio", label: "AI Content Studio checking", icon: Sparkles, description: "Generate captions, reels & visuals" },
+  { id: "studio", label: "AI Content Studio", icon: Sparkles, description: "Generate captions, reels & visuals" },
   { id: "calendar", label: "Calendar & Approvals", icon: CalendarClock, description: "Schedule & approve content" },
   { id: "inbox", label: "Unified Inbox", icon: Inbox, description: "AI auto-responder for DMs" },
   { id: "analytics", label: "Analytics & Leads", icon: BarChart3, description: "Performance & lead reports" },
@@ -93,19 +93,9 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
 
           {/* Bottom card */}
           <div className="p-4">
-            <div className="glass-light rounded-xl p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-medium text-slate-700">AI Engine Online</span>
-              </div>
-              <div className="flex items-center justify-between text-[11px] text-slate-500">
-                <span>GPT-4o · Gemini Pro</span>
-                <span className="text-emerald-700 dark:text-emerald-400 font-medium">Active</span>
-              </div>
-              <div className="h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                <div className="h-full w-[78%] rounded-full bg-blue-500" />
-              </div>
-              <p className="text-[10px] text-slate-500">Monthly AI credits: 7,800 / 10,000</p>
+            <div className="glass-light rounded-xl p-4 space-y-1">
+              <p className="text-xs font-medium text-slate-700">AI powered by Google Gemini</p>
+              <p className="text-[10px] text-slate-500">Your daily usage shows inside the Studio.</p>
             </div>
           </div>
         </div>
