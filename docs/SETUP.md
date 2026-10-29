@@ -124,6 +124,15 @@ Google AI Studio, delete the old one and update the secret.
 | "Not signed in" / 401 | Sign out and in again. The function checks your login on every call |
 | Function not found (404) | The function is not deployed yet (step 4) |
 
+## 9. Turn on the Inbox
+
+SQL Editor, New query, paste all of `supabase/migrations/0003_messages.sql`, Run. That is all.
+The Inbox uses the same Gemini key and daily limit as the Studio, so nothing else is needed.
+
+Until Facebook, Instagram, TikTok and YouTube are connected (they need app review by each platform),
+messages are added by hand with **Add message**. The AI drafts the reply, you copy it, post it on the
+platform and press **Mark as replied**.
+
 ---
 
 ## Local development
@@ -146,6 +155,6 @@ Without `.env.local` the app starts in demo mode.
 | Publishing to Facebook and Instagram | A Meta developer app, a Facebook Page linked to an Instagram professional account, and Meta app review for the publishing permissions |
 | Publishing to TikTok | A TikTok developer app and approval for the Content Posting API |
 | Publishing to YouTube | A Google Cloud project with the YouTube Data API v3 and OAuth consent verification |
-| Receiving real DMs and comments | The same developer apps and their webhooks |
+| Receiving real DMs and comments automatically, and sending replies | The same developer apps and their webhooks (today messages are added by hand) |
 
 The platform approvals can take days or weeks, so it is worth starting those applications early.

@@ -9,7 +9,7 @@
 // Options shared with the website
 // ---------------------------------------------------------------------------
 
-export const KINDS = ["captions", "script", "visual"] as const;
+export const KINDS = ["captions", "script", "visual", "reply"] as const;
 export type Kind = (typeof KINDS)[number];
 
 export const TONES = ["Engaging", "Professional", "Humorous", "Inspirational", "Bold"] as const;
@@ -62,7 +62,10 @@ export interface ScriptResult {
 export interface VisualResult {
   ideas: { title: string; description: string; imagePrompt: string }[];
 }
-export type GenerateResult = CaptionsResult | ScriptResult | VisualResult;
+export interface ReplyResult {
+  replies: { text: string }[];
+}
+export type GenerateResult = CaptionsResult | ScriptResult | VisualResult | ReplyResult;
 
 export interface GenerateSuccess {
   kind: Kind;
@@ -119,7 +122,7 @@ export function validateRequest(
   if (!kind) return { ok: false, message: `kind must be one of: ${KINDS.join(", ")}.` };
 
   const topic = cleanText(body.topic);
-  if (topic.length < LIMITS.topicMin) return { ok: false, message: "Describe what the post is about (at least 3 characters)." };
+  if (topic.length < LIMITS.topicMin) return { ok: false, message: "Describe what the post or message is about (at least 3 characters)." };
   if (topic.length > LIMITS.topicMax) return { ok: false, message: `The topic is too long (maximum ${LIMITS.topicMax} characters).` };
 
   const audience = cleanText(body.audience) || "General audience";
@@ -188,6 +191,8 @@ const TASKS: Record<Kind, string> = {
     "Write a script for a vertical short video (a Reel, TikTok or Short) of 15 to 45 seconds. Start with a hook in the first 3 seconds. Give 3 to 6 scenes, each with a time range, what is shown on screen, and the exact voiceover line. End with a call to action.",
   visual:
     "Suggest exactly 3 different visual concepts for this post (graphic, photo or short video thumbnail). For each, give a short title, a description of what the viewer sees, and a detailed image generation prompt in English that could be pasted into an image generator.",
+  reply:
+    "The text inside <topic> is a message (a comment or a direct message) that a customer sent to the brand on social media. Write exactly 2 reply options the brand can send: the first short (one sentence), the second a little warmer and more helpful (two or three sentences). Answer what the customer actually asked or said. Do not promise prices, stock, delivery times, discounts or anything the message and brand details do not state. If you lack the information, invite them to send a direct message or say the team will follow up. Be polite even if the customer is rude or upset, and never argue. Do not use hashtags.",
 };
 
 // Gemini accepts an OpenAPI style schema. Type names are upper case.
@@ -239,6 +244,13 @@ const SCHEMAS: Record<Kind, unknown> = {
     },
     required: ["ideas"],
   },
+  reply: {
+    type: "OBJECT",
+    properties: {
+      replies: { type: "ARRAY", items: { type: "OBJECT", properties: { text: STR }, required: ["text"] } },
+    },
+    required: ["replies"],
+  },
 };
 
 export function buildGeminiRequest(req: GenerateRequest): Record<string, unknown> {
@@ -246,7 +258,7 @@ export function buildGeminiRequest(req: GenerateRequest): Record<string, unknown
     systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
     contents: [{ role: "user", parts: [{ text: `${TASKS[req.kind]}\n\n${briefBlock(req)}` }] }],
     generationConfig: {
-      temperature: req.kind === "captions" ? 0.9 : 0.8,
+      temperature: req.kind === "captions" ? 0.9 : req.kind === "reply" ? 0.6 : 0.8,
       maxOutputTokens: 8192,
       responseMimeType: "application/json",
       responseSchema: SCHEMAS[req.kind],
@@ -375,6 +387,16 @@ export function parseResult(kind: Kind, text: string): { ok: true; result: Gener
         musicMood: clip(data.musicMood, 120),
       },
     };
+  }
+
+  if (kind === "reply") {
+    const list = Array.isArray(data.replies) ? data.replies : [];
+    const replies = list
+      .filter(isRecord)
+      .map((r) => ({ text: clip(r.text, 1000) }))
+      .filter((r) => r.text.length > 0)
+      .slice(0, 4);
+    return replies.length > 0 ? { ok: true, result: { replies } } : BAD_OUTPUT;
   }
 
   const list = Array.isArray(data.ideas) ? data.ideas : [];

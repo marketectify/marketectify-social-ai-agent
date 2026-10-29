@@ -1,4 +1,4 @@
-import type { InboxMessage, Platform } from "./types";
+import type { Platform } from "./types";
 
 export const platformLabels: Record<Platform, string> = {
   facebook: "Facebook",
@@ -20,87 +20,6 @@ export const platformBg: Record<Platform, string> = {
   tiktok: "bg-cyan-500/10 border-cyan-500/30",
   youtube: "bg-red-500/10 border-red-500/30",
 };
-
-export const inboxMessages: InboxMessage[] = [
-  {
-    id: "m1",
-    platform: "instagram",
-    sender: "Sarah Chen",
-    senderHandle: "@sarahcreative",
-    avatarColor: "bg-pink-600",
-    message: "Love your content! How can I get started with Marketectify for my agency?",
-    timestamp: "2 min ago",
-    unread: true,
-    type: "dm",
-    aiSuggestedReply:
-      "Hi Sarah! Thanks so much for the love! 🙏 You can start your free trial at marketectify.ai/signup — it takes under 2 minutes to set up. Would you like me to share a quick onboarding guide tailored for agencies?",
-  },
-  {
-    id: "m2",
-    platform: "tiktok",
-    sender: "Mike Rivera",
-    senderHandle: "@mikebuilds",
-    avatarColor: "bg-cyan-700",
-    message: "This AI tool is insane! Does it support scheduling for multiple clients?",
-    timestamp: "15 min ago",
-    unread: true,
-    type: "comment",
-    aiSuggestedReply:
-      "Hey Mike! Absolutely — Marketectify Pro supports unlimited client workspaces with separate calendars, analytics, and approval flows. You can switch between client accounts in one click. Let me know if you'd like a demo! 🚀",
-  },
-  {
-    id: "m3",
-    platform: "facebook",
-    sender: "Jessica Park",
-    senderHandle: "Jessica Park",
-    avatarColor: "bg-blue-600",
-    message: "What's the pricing for the enterprise plan? We have a team of 20+",
-    timestamp: "1 hour ago",
-    unread: false,
-    type: "dm",
-    aiSuggestedReply:
-      "Hi Jessica! Our Enterprise plan starts at $499/mo and includes 25 seats, dedicated support, custom AI training, and white-label options. I'd be happy to schedule a call with our team to discuss your needs. Would Thursday work?",
-  },
-  {
-    id: "m4",
-    platform: "youtube",
-    sender: "David Kumar",
-    senderHandle: "@davidtechreview",
-    avatarColor: "bg-red-600",
-    message: "Great video! Can the AI generate content in Spanish?",
-    timestamp: "3 hours ago",
-    unread: false,
-    type: "comment",
-    aiSuggestedReply:
-      "Thanks David! Yes — Marketectify AI supports 30+ languages including Spanish, French, German, Hindi, and more. You can select your target language in the Content Studio before generating. ¡Estamos aquí para ayudarte! 🌍",
-  },
-  {
-    id: "m5",
-    platform: "instagram",
-    sender: "Emily Watson",
-    senderHandle: "@emilydesigns",
-    avatarColor: "bg-indigo-600",
-    message: "Just signed up! The reel generation feature is a game changer 🔥",
-    timestamp: "5 hours ago",
-    unread: false,
-    type: "comment",
-    aiSuggestedReply:
-      "Welcome to Marketectify, Emily! 🎉 So glad you're loving the Reel generator. If you ever need tips or have feedback, our team is always here. Happy creating! ✨",
-  },
-  {
-    id: "m6",
-    platform: "tiktok",
-    sender: "Alex Foster",
-    senderHandle: "@alexfosterbiz",
-    avatarColor: "bg-teal-700",
-    message: "Do you offer integrations with HubSpot?",
-    timestamp: "8 hours ago",
-    unread: false,
-    type: "dm",
-    aiSuggestedReply:
-      "Hi Alex! Yes, we have a native HubSpot integration that syncs leads captured through AI DMs directly into your CRM. You can connect it from Settings > Integrations. Need help setting it up?",
-  },
-];
 
 export const engagementData = [
   { platform: "Facebook", value: 82, color: "bg-blue-500", reach: "640K", engagement: "6.2%" },

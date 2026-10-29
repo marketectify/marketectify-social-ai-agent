@@ -2,7 +2,7 @@ import { FunctionsHttpError } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import type { GenerateRequest, GenerateResult, GenerateSuccess, Kind } from "../../supabase/functions/generate-content/logic";
 
-export type { CaptionsResult, ScriptResult, VisualResult, GenerateRequest, Kind } from "../../supabase/functions/generate-content/logic";
+export type { CaptionsResult, ScriptResult, VisualResult, ReplyResult, GenerateRequest, Kind } from "../../supabase/functions/generate-content/logic";
 export { LANGUAGES, TONES, PLATFORM_FOCUS, LIMITS } from "../../supabase/functions/generate-content/logic";
 
 /** An error with a message that is safe and useful to show to the user. */
