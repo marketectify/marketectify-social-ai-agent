@@ -100,6 +100,7 @@ export function demoMessages(now: Date): Message[] {
       reply: null,
       receivedAt: ago(2),
       repliedAt: null,
+      isLead: false,
     },
     {
       id: "demo-m2",
@@ -112,6 +113,7 @@ export function demoMessages(now: Date): Message[] {
       reply: null,
       receivedAt: ago(15),
       repliedAt: null,
+      isLead: false,
     },
     {
       id: "demo-m3",
@@ -124,6 +126,7 @@ export function demoMessages(now: Date): Message[] {
       reply: "Hi Jessica! Thanks for reaching out. We would love to help. Could you send us your email so we can share the packages?",
       receivedAt: ago(60 * 5),
       repliedAt: ago(60 * 4),
+      isLead: true,
     },
   ];
 }

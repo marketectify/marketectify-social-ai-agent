@@ -45,7 +45,9 @@ export interface Message {
   /** ISO timestamp */
   receivedAt: string;
   repliedAt: string | null;
+  /** The person looks like a potential customer. Counted in Analytics. */
+  isLead: boolean;
 }
 
-export type MessageInput = Omit<Message, "id" | "status" | "reply" | "repliedAt"> &
-  Partial<Pick<Message, "status" | "reply" | "repliedAt">>;
+export type MessageInput = Omit<Message, "id" | "status" | "reply" | "repliedAt" | "isLead"> &
+  Partial<Pick<Message, "status" | "reply" | "repliedAt" | "isLead">>;

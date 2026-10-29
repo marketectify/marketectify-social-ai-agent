@@ -8,7 +8,7 @@ interface MessagesContextValue {
   error: string | null;
   reload: () => Promise<void>;
   addMessage: (input: MessageInput) => Promise<Message>;
-  updateMessage: (id: string, patch: Partial<Pick<Message, "status" | "reply" | "repliedAt">>) => Promise<Message>;
+  updateMessage: (id: string, patch: Partial<Pick<Message, "status" | "reply" | "repliedAt" | "isLead">>) => Promise<Message>;
   deleteMessage: (id: string) => Promise<void>;
 }
 
@@ -45,7 +45,7 @@ export function MessagesProvider({ repo, children }: { repo: MessagesRepo; child
   );
 
   const updateMessage = useCallback(
-    async (id: string, patch: Partial<Pick<Message, "status" | "reply" | "repliedAt">>) => {
+    async (id: string, patch: Partial<Pick<Message, "status" | "reply" | "repliedAt" | "isLead">>) => {
       const updated = await repo.update(id, patch);
       setMessages((prev) => prev.map((m) => (m.id === id ? updated : m)));
       return updated;

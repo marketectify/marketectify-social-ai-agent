@@ -133,6 +133,15 @@ Until Facebook, Instagram, TikTok and YouTube are connected (they need app revie
 messages are added by hand with **Add message**. The AI drafts the reply, you copy it, post it on the
 platform and press **Mark as replied**.
 
+## 10. Turn on Analytics and Leads
+
+SQL Editor, New query, paste all of `supabase/migrations/0004_message_leads.sql`, Run.
+
+Analytics is calculated from your own posts and messages (published, scheduled, reply rate, average reply
+time, leads, posts per month, CSV export). In the Inbox press **Mark as lead** on messages from potential
+customers and the lead funnel fills in. Reach, likes and followers only exist inside Facebook, Instagram,
+TikTok and YouTube, so they will appear after those connections are built, not before.
+
 ---
 
 ## Local development

@@ -45,8 +45,15 @@ describe("local messages repo", () => {
     expect((await repo.list()).some((x) => x.id === m.id)).toBe(true);
   });
 
+  it("tracks the lead flag", async () => {
+    const repo = createLocalMessagesRepo(null, () => NOW);
+    const m = await repo.create(input);
+    expect(m.isLead).toBe(false);
+    expect((await repo.update(m.id, { isLead: true })).isLead).toBe(true);
+  });
+
   it("sorts newest first", () => {
-    const a = { ...input, id: "a", status: "read" as const, reply: null, repliedAt: null, receivedAt: "2026-10-01T00:00:00Z" };
+    const a = { ...input, id: "a", status: "read" as const, reply: null, repliedAt: null, isLead: false, receivedAt: "2026-10-01T00:00:00Z" };
     const b = { ...a, id: "b", receivedAt: "2026-10-02T00:00:00Z" };
     expect(sortMessages([a, b]).map((m) => m.id)).toEqual(["b", "a"]);
   });
