@@ -86,6 +86,44 @@ site served from them stays in demo mode. Only the `deploy` branch has the keys 
 
 If you see "We couldn't load your workspace", step 2 (the SQL script) was not run.
 
+## 8. Turn on the AI Content Studio (Google Gemini)
+
+The Studio writes captions, hashtags, reel scripts and visual ideas with Google Gemini.
+The Gemini key is stored **only inside Supabase** as a secret. It is never put in GitHub,
+never in the website code and never sent to the browser.
+
+1. **Daily limit table.** SQL Editor, New query, paste all of `supabase/migrations/0002_ai_quota.sql`, Run.
+   This stops one account from using up your Gemini budget (default 60 generations per account per day).
+2. **Get a key** at <https://aistudio.google.com/apikey> (Create API key).
+3. **Save it as a secret.** Supabase dashboard, **Edge Functions**, **Secrets**, add:
+   - `GEMINI_API_KEY` = your key (required)
+   - `GEMINI_MODEL` = optional, one model name or a comma separated list tried in order
+     (default `gemini-3.5-flash-lite,gemini-3.6-flash,gemini-2.5-flash`)
+   - `AI_DAILY_LIMIT` = optional, generations per account per day (default 60)
+4. **Deploy the function.** Two ways:
+   - Automatic: in GitHub, Settings, Secrets and variables, Actions, add `SUPABASE_ACCESS_TOKEN`
+     (Supabase, Account, Access Tokens) and `SUPABASE_PROJECT_REF` (the part of your project URL
+     before `.supabase.co`). The workflow *Deploy Supabase functions* then deploys on every merge
+     to `main` that changes `supabase/functions`, and you can also run it by hand from the Actions tab.
+   - Manual: install the Supabase CLI, then
+     `supabase functions deploy generate-content --project-ref YOUR_REF` and
+     `supabase secrets set GEMINI_API_KEY=...`.
+5. Sign in, open **AI Content Studio**, write a topic and press **Captions & hashtags**.
+
+If you pasted the key anywhere public (a chat, a screenshot, a commit), create a new key in
+Google AI Studio, delete the old one and update the secret.
+
+### Troubleshooting the Studio
+
+| Message | Fix |
+| --- | --- |
+| "The AI is not set up yet" | `GEMINI_API_KEY` secret is missing, or the function was not redeployed after adding it |
+| "The AI key was rejected" | The key is wrong, deleted or restricted. Create a new one |
+| "None of the configured AI models is available" | Set `GEMINI_MODEL` to a model listed in Google AI Studio, for example `gemini-2.5-flash` |
+| "daily limit table is missing" | Run `0002_ai_quota.sql` (step 1) |
+| "Not signed in" / 401 | Sign out and in again. The function checks your login on every call |
+| Function not found (404) | The function is not deployed yet (step 4) |
+
 ---
 
 ## Local development
@@ -104,7 +142,6 @@ Without `.env.local` the app starts in demo mode.
 
 | Feature | What you will need |
 | --- | --- |
-| AI captions, hashtags, reel scripts | A **Google Gemini API key** from <https://aistudio.google.com/apikey>. It is stored as a secret inside Supabase and called from a server function, so it never reaches the browser. |
 | AI reply drafts in the Inbox | The same Gemini key |
 | Publishing to Facebook and Instagram | A Meta developer app, a Facebook Page linked to an Instagram professional account, and Meta app review for the publishing permissions |
 | Publishing to TikTok | A TikTok developer app and approval for the Content Posting API |
