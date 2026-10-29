@@ -19,7 +19,7 @@ const navItems: { id: TabId; label: string; icon: typeof LayoutDashboard; descri
   { id: "overview", label: "Dashboard", icon: LayoutDashboard, description: "Key metrics & quick actions" },
   { id: "studio", label: "AI Content Studio", icon: Sparkles, description: "Generate captions, reels & visuals" },
   { id: "calendar", label: "Calendar & Approvals", icon: CalendarClock, description: "Schedule & approve content" },
-  { id: "inbox", label: "Unified Inbox", icon: Inbox, description: "AI auto-responder for DMs" },
+  { id: "inbox", label: "Unified Inbox", icon: Inbox, description: "Comments, DMs & AI replies" },
   { id: "analytics", label: "Analytics & Leads", icon: BarChart3, description: "Performance & lead reports" },
 ];
 

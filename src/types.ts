@@ -28,15 +28,24 @@ export interface Post {
 
 export type PostInput = Omit<Post, "id">;
 
-export interface InboxMessage {
+export type MessageKind = "comment" | "dm";
+export type MessageStatus = "unread" | "read" | "replied";
+
+/** A customer comment or direct message. */
+export interface Message {
   id: string;
   platform: Platform;
-  sender: string;
+  kind: MessageKind;
+  senderName: string;
   senderHandle: string;
-  avatarColor: string;
-  message: string;
-  timestamp: string;
-  unread: boolean;
-  type: "comment" | "dm";
-  aiSuggestedReply?: string;
+  body: string;
+  status: MessageStatus;
+  /** The reply that was sent (or copied to the platform), if any. */
+  reply: string | null;
+  /** ISO timestamp */
+  receivedAt: string;
+  repliedAt: string | null;
 }
+
+export type MessageInput = Omit<Message, "id" | "status" | "reply" | "repliedAt"> &
+  Partial<Pick<Message, "status" | "reply" | "repliedAt">>;

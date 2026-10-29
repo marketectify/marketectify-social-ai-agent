@@ -1,4 +1,4 @@
-import type { Post } from "../types";
+import type { Message, Post } from "../types";
 import { addDays, atHour } from "./dates";
 
 /**
@@ -81,6 +81,49 @@ export function demoPosts(now: Date): Post[] {
       platforms: ["facebook", "youtube"],
       status: "draft",
       scheduledAt: null,
+    },
+  ];
+}
+
+/** Sample messages for demo mode, dated relative to "now". */
+export function demoMessages(now: Date): Message[] {
+  const ago = (minutes: number) => new Date(now.getTime() - minutes * 60_000).toISOString();
+  return [
+    {
+      id: "demo-m1",
+      platform: "instagram",
+      kind: "dm",
+      senderName: "Sarah Chen",
+      senderHandle: "@sarahcreative",
+      body: "Love your content! How can I get started with your agency?",
+      status: "unread",
+      reply: null,
+      receivedAt: ago(2),
+      repliedAt: null,
+    },
+    {
+      id: "demo-m2",
+      platform: "tiktok",
+      kind: "comment",
+      senderName: "Mike Rivera",
+      senderHandle: "@mikebuilds",
+      body: "This is great! Do you manage multiple clients at once?",
+      status: "unread",
+      reply: null,
+      receivedAt: ago(15),
+      repliedAt: null,
+    },
+    {
+      id: "demo-m3",
+      platform: "facebook",
+      kind: "dm",
+      senderName: "Jessica Park",
+      senderHandle: "Jessica Park",
+      body: "What are your packages? We are a team of 20+.",
+      status: "replied",
+      reply: "Hi Jessica! Thanks for reaching out. We would love to help. Could you send us your email so we can share the packages?",
+      receivedAt: ago(60 * 5),
+      repliedAt: ago(60 * 4),
     },
   ];
 }

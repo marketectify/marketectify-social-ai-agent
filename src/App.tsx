@@ -12,9 +12,11 @@ import Login, { SetNewPassword } from "./components/Login";
 import { useTheme, type Theme } from "./theme";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { PostsProvider } from "./context/PostsContext";
+import { MessagesProvider } from "./context/MessagesContext";
 import { ToastProvider } from "./context/ToastContext";
 import { supabase } from "./lib/supabase";
 import { createLocalPostsRepo, createSupabasePostsRepo, type PostsRepo } from "./lib/postsRepo";
+import { createLocalMessagesRepo, createSupabaseMessagesRepo, type MessagesRepo } from "./lib/messagesRepo";
 
 interface ThemeProps {
   theme: Theme;
@@ -90,11 +92,24 @@ function Gate({ theme, onToggleTheme }: ThemeProps) {
     return supabase && workspace ? createSupabasePostsRepo(supabase, workspace.id) : null;
   }, [mode, workspace]);
 
+  const messagesRepo = useMemo<MessagesRepo | null>(() => {
+    if (mode === "demo") {
+      let storage: Storage | null = null;
+      try {
+        storage = window.localStorage;
+      } catch {
+        storage = null;
+      }
+      return createLocalMessagesRepo(storage);
+    }
+    return supabase && workspace ? createSupabaseMessagesRepo(supabase, workspace.id) : null;
+  }, [mode, workspace]);
+
   if (!ready) return <Splash />;
   if (!user) return <Login theme={theme} onToggleTheme={onToggleTheme} />;
   if (recovering) return <SetNewPassword theme={theme} onToggleTheme={onToggleTheme} />;
 
-  if (workspaceError || !repo) {
+  if (workspaceError || !repo || !messagesRepo) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="glass rounded-2xl p-6 max-w-md text-center space-y-4" role="alert">
@@ -125,7 +140,9 @@ function Gate({ theme, onToggleTheme }: ThemeProps) {
   return (
     // `key` makes sure nothing from a previous account leaks into the next one.
     <PostsProvider key={user.id + (workspace?.id ?? "")} repo={repo}>
-      <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
+      <MessagesProvider repo={messagesRepo}>
+        <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
+      </MessagesProvider>
     </PostsProvider>
   );
 }
