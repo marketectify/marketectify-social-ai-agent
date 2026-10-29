@@ -6,7 +6,7 @@ import { newId } from "./postsRepo";
 export interface MessagesRepo {
   list(): Promise<Message[]>;
   create(input: MessageInput): Promise<Message>;
-  update(id: string, patch: Partial<Pick<Message, "status" | "reply" | "repliedAt">>): Promise<Message>;
+  update(id: string, patch: Partial<Pick<Message, "status" | "reply" | "repliedAt" | "isLead">>): Promise<Message>;
   remove(id: string): Promise<void>;
 }
 
@@ -34,7 +34,8 @@ function isMessage(x: unknown): x is Message {
     STATUSES.includes(m.status as MessageStatus) &&
     (m.reply === null || typeof m.reply === "string") &&
     typeof m.receivedAt === "string" &&
-    (m.repliedAt === null || typeof m.repliedAt === "string")
+    (m.repliedAt === null || typeof m.repliedAt === "string") &&
+    (m.isLead === undefined || typeof m.isLead === "boolean")
   );
 }
 
@@ -50,6 +51,7 @@ function complete(input: MessageInput, id: string): Message {
     reply: input.reply ?? null,
     receivedAt: input.receivedAt,
     repliedAt: input.repliedAt ?? null,
+    isLead: input.isLead ?? false,
   };
 }
 
@@ -76,7 +78,7 @@ export function createLocalMessagesRepo(storage: StorageLike | null, now: () => 
       if (raw) {
         const parsed: unknown = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          memory = parsed.filter(isMessage);
+          memory = parsed.filter(isMessage).map((m) => ({ ...m, isLead: m.isLead === true }));
           return memory;
         }
       }
@@ -129,9 +131,10 @@ interface MessageRow {
   reply: string | null;
   received_at: string;
   replied_at: string | null;
+  is_lead: boolean | null;
 }
 
-const COLUMNS = "id,platform,kind,sender_name,sender_handle,body,status,reply,received_at,replied_at";
+const COLUMNS = "id,platform,kind,sender_name,sender_handle,body,status,reply,received_at,replied_at,is_lead";
 
 function fromRow(r: MessageRow): Message {
   return {
@@ -145,6 +148,7 @@ function fromRow(r: MessageRow): Message {
     reply: r.reply,
     receivedAt: r.received_at,
     repliedAt: r.replied_at,
+    isLead: r.is_lead === true,
   };
 }
 
@@ -174,6 +178,7 @@ export function createSupabaseMessagesRepo(client: SupabaseClient, workspaceId: 
           reply: input.reply ?? null,
           received_at: input.receivedAt,
           replied_at: input.repliedAt ?? null,
+          is_lead: input.isLead ?? false,
         })
         .select(COLUMNS)
         .single();
@@ -185,6 +190,7 @@ export function createSupabaseMessagesRepo(client: SupabaseClient, workspaceId: 
       if (patch.status !== undefined) row.status = patch.status;
       if (patch.reply !== undefined) row.reply = patch.reply;
       if (patch.repliedAt !== undefined) row.replied_at = patch.repliedAt;
+      if (patch.isLead !== undefined) row.is_lead = patch.isLead;
       const { data, error } = await client
         .from("messages")
         .update(row)

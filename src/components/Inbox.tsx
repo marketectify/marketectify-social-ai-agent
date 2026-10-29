@@ -215,6 +215,7 @@ export default function Inbox() {
                         <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-blue-500/15 text-blue-700 dark:text-blue-300">
                           {m.kind === "dm" ? "DM" : "Comment"}
                         </span>
+                        {m.isLead && <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">Lead</span>}
                         {m.status === "replied" && <Check className="w-3 h-3 text-emerald-700 dark:text-emerald-400 shrink-0" aria-label="Replied" />}
                         <p className="text-xs text-slate-500 truncate">{m.body}</p>
                       </div>
@@ -251,6 +252,9 @@ export default function Inbox() {
               onMarkUnreplied={async () => {
                 await updateMessage(selected.id, { status: "read", repliedAt: null });
               }}
+              onToggleLead={async () => {
+                await updateMessage(selected.id, { isLead: !selected.isLead });
+              }}
               onDelete={async () => {
                 await deleteMessage(selected.id);
                 setSelectedId(null);
@@ -276,12 +280,14 @@ function Conversation({
   demo,
   onMarkReplied,
   onMarkUnreplied,
+  onToggleLead,
   onDelete,
 }: {
   message: Message;
   demo: boolean;
   onMarkReplied: (reply: string) => Promise<void>;
   onMarkUnreplied: () => Promise<void>;
+  onToggleLead: () => Promise<void>;
   onDelete: () => Promise<void>;
 }) {
   const { workspace } = useAuth();
@@ -366,6 +372,18 @@ function Conversation({
           <Icon className={`w-3.5 h-3.5 ${platformColor[message.platform]}`} />
           <span className="text-xs font-medium text-slate-700">{platformLabels[message.platform]}</span>
         </div>
+        <button
+          onClick={() => wrap(onToggleLead)}
+          disabled={busy}
+          aria-pressed={message.isLead}
+          className={`px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
+            message.isLead
+              ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-500/30"
+              : "text-slate-600 border-slate-200/70 hover:bg-slate-100/60"
+          }`}
+        >
+          {message.isLead ? "Lead ✓" : "Mark as lead"}
+        </button>
         {confirmDelete ? (
           <div className="flex items-center gap-1.5">
             <button
