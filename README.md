@@ -16,10 +16,6 @@ Built with React, TypeScript, Vite and Tailwind CSS. Accounts and data use Supab
 - Analytics and leads from your real posts and messages: reply rate, response time, lead funnel, posts per month, CSV export
 - Light and dark themes
 
-## Still sample data (marked on screen)
-
- They are being
-connected to real data step by step.
 
 ## Getting started
 
