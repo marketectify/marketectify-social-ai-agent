@@ -27,6 +27,28 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Check Supabase keys are available
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY; do
+            value="${!name}"
+            if [ -z "$value" ]; then
+              echo "::error title=$name is empty::GitHub did not pass $name to this build. Add it under Settings > Secrets and variables > Actions > Repository secrets (not Variables, not Environments), with exactly this name."
+              missing=1
+            else
+              echo "$name is set (${#value} characters)"
+            fi
+          done
+          if [ "${missing:-0}" = "1" ]; then
+            echo "::warning::Building in DEMO mode because the keys above are missing."
+          fi
+          case "$VITE_SUPABASE_URL" in
+            ""|https://*.supabase.co) ;;
+            *) echo "::error title=VITE_SUPABASE_URL looks wrong::It must look like https://abcdxyz.supabase.co (no /rest/v1, no spaces)."; exit 1 ;;
+          esac
+
       - name: Install and build
         env:
           # Public values (safe in the browser). Without them the site runs in demo mode.
