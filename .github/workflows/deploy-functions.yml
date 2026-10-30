@@ -37,3 +37,6 @@ jobs:
       - name: Deploy generate-content
         if: steps.check.outputs.ready == 'true'
         run: supabase functions deploy generate-content --project-ref "$SUPABASE_PROJECT_REF"
+      - name: Deploy help-assistant
+        if: steps.check.outputs.ready == 'true'
+        run: supabase functions deploy help-assistant --project-ref "$SUPABASE_PROJECT_REF"

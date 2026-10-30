@@ -6,3 +6,6 @@ project_id = "marketectify-social-ai-agent"
 # Supabase key type. The gateway-level JWT check is therefore switched off.
 [functions.generate-content]
 verify_jwt = false
+
+[functions.help-assistant]
+verify_jwt = false
