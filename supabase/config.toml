@@ -6,3 +6,14 @@ project_id = "marketectify-social-ai-agent"
 # Supabase key type. The gateway-level JWT check is therefore switched off.
 [functions.generate-content]
 verify_jwt = false
+
+# youtube-auth and youtube-refresh check the login themselves (like generate-content).
+[functions.youtube-auth]
+verify_jwt = false
+
+[functions.youtube-refresh]
+verify_jwt = false
+
+# Google sends the browser here without a login header. The signed "state" value proves it is genuine.
+[functions.youtube-callback]
+verify_jwt = false

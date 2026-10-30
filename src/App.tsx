@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import type { TabId } from "./types";
 import Sidebar from "./components/Sidebar";
@@ -13,6 +13,9 @@ import { useTheme, type Theme } from "./theme";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { PostsProvider } from "./context/PostsContext";
 import { MessagesProvider } from "./context/MessagesContext";
+import { SocialAccountsProvider, useSocialAccounts } from "./context/SocialAccountsContext";
+import { useToast } from "./context/ToastContext";
+import { connectErrorMessage } from "./lib/socialAccounts";
 import { ToastProvider } from "./context/ToastContext";
 import { supabase } from "./lib/supabase";
 import { createLocalPostsRepo, createSupabasePostsRepo, type PostsRepo } from "./lib/postsRepo";
@@ -35,6 +38,30 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const { mode } = useAuth();
+  const toast = useToast();
+  const social = useSocialAccounts();
+  const { reload: reloadAccounts, refresh: refreshAccounts } = social;
+
+  // Google sends the browser back with ?connected=youtube or ?connect_error=... . Show the result and tidy the address.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("connected");
+    const problem = params.get("connect_error");
+    if (!connected && !problem) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (problem) {
+      toast.error(connectErrorMessage(problem));
+      return;
+    }
+    toast.success("YouTube connected");
+    void reloadAccounts();
+  }, [toast, reloadAccounts]);
+
+  // Keep channel numbers fresh (once per visit).
+  useEffect(() => {
+    if (mode !== "supabase") return;
+    void refreshAccounts();
+  }, [mode, refreshAccounts]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
@@ -141,7 +168,9 @@ function Gate({ theme, onToggleTheme }: ThemeProps) {
     // `key` makes sure nothing from a previous account leaks into the next one.
     <PostsProvider key={user.id + (workspace?.id ?? "")} repo={repo}>
       <MessagesProvider repo={messagesRepo}>
-        <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
+        <SocialAccountsProvider>
+          <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
+        </SocialAccountsProvider>
       </MessagesProvider>
     </PostsProvider>
   );

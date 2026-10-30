@@ -142,6 +142,40 @@ time, leads, posts per month, CSV export). In the Inbox press **Mark as lead** o
 customers and the lead funnel fills in. Reach, likes and followers only exist inside Facebook, Instagram,
 TikTok and YouTube, so they will appear after those connections are built, not before.
 
+## 10. Connect YouTube
+
+Connecting shows your channel name and real subscriber, view and video counts in the top bar and in
+Analytics. (Publishing videos comes later: it needs a video upload feature.)
+
+**Google Cloud (free)**
+1. <https://console.cloud.google.com>, create a project, then **APIs & Services, Library**, enable **YouTube Data API v3**.
+2. **OAuth consent screen**: user type External, app name, your email. Add your own Gmail under **Test users**.
+3. **Credentials, Create credentials, OAuth client ID**, type **Web application**. Under
+   **Authorized redirect URIs** add `https://YOUR-PROJECT-REF.supabase.co/functions/v1/youtube-callback`.
+4. Copy the Client ID and Client secret.
+
+**Supabase**
+1. SQL Editor: run `supabase/migrations/0005_social_accounts.sql`.
+2. Edge Functions, Secrets, add:
+   - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (from step 4)
+   - `OAUTH_STATE_SECRET` = any long random text (30+ characters)
+   - `SITE_URL` = `https://social-ai.marketectify.com`
+3. Deploy the functions: merge to `main` (the deploy workflow now deploys `youtube-auth`, `youtube-callback`
+   and `youtube-refresh` too), or run the workflow by hand from the Actions tab.
+4. Open the site, press **Connect** next to YouTube in the top bar, choose your Google account, allow access.
+
+While the Google app is in "Testing" mode only the listed test users can connect, and Google makes the
+login expire after 7 days (press Connect again). For other people's channels the app needs Google verification.
+The login tokens are stored in the database but can never be read from the browser, only by the server functions.
+
+| Message | Fix |
+| --- | --- |
+| "YouTube is not set up" | A Google secret is missing, or the functions were not redeployed |
+| Google says "redirect_uri_mismatch" | The redirect URI in Google Cloud must match exactly step 3 above |
+| Google says "access blocked" | Add your Gmail under Test users on the OAuth consent screen |
+| "YouTube Data API v3 is not enabled" | Enable it in Google Cloud, Library |
+| "no YouTube channel" | Create a channel on youtube.com with that Google account |
+
 ---
 
 ## Local development
