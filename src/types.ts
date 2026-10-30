@@ -1,6 +1,7 @@
 export type TabId =
   | "overview"
   | "studio"
+  | "design"
   | "calendar"
   | "inbox"
   | "analytics";

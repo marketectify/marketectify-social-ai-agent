@@ -142,6 +142,13 @@ time, leads, posts per month, CSV export). In the Inbox press **Mark as lead** o
 customers and the lead funnel fills in. Reach, likes and followers only exist inside Facebook, Instagram,
 TikTok and YouTube, so they will appear after those connections are built, not before.
 
+## Design Studio
+
+Nothing to set up. Open **Design Studio**, drag a heading, paragraph, box, circle or picture onto the canvas
+(or drop a picture file from your computer), pick a background (colour, blend or picture) and press **Download PNG**.
+Designs you press **Save** on are kept in the browser on that computer. They are not in the database yet, so they
+do not follow you to another computer. Download the PNG to keep a permanent copy.
+
 ---
 
 ## Local development

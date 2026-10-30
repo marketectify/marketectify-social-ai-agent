@@ -5,6 +5,7 @@ import Sidebar from "./components/Sidebar";
 import TopNav from "./components/TopNav";
 import Overview from "./components/Overview";
 import Studio from "./components/Studio";
+import Designer from "./components/Designer";
 import Calendar from "./components/Calendar";
 import Inbox from "./components/Inbox";
 import Analytics from "./components/Analytics";
@@ -66,6 +67,9 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
           {/* Kept mounted (just hidden) so generated results survive tab switches. */}
           <div hidden={activeTab !== "studio"}>
             <Studio />
+          </div>
+          <div hidden={activeTab !== "design"}>
+            <Designer />
           </div>
           {activeTab === "calendar" && <Calendar />}
           {activeTab === "inbox" && <Inbox />}
