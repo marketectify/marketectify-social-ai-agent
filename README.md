@@ -14,6 +14,7 @@ Built with React, TypeScript, Vite and Tailwind CSS. Accounts and data use Supab
 - AI Content Studio: captions, hashtags, reel scripts and visual ideas from Google Gemini (key stays on the server, daily limit per account)
 - Inbox: add customer comments and DMs, AI reply drafts in your tone and language, track replied / unread
 - Analytics and leads from your real posts and messages: reply rate, response time, lead funnel, posts per month, CSV export
+- Connect YouTube: real channel name, subscribers, views and videos in the top bar and Analytics
 - Light and dark themes
 
 

@@ -6,6 +6,9 @@ import { platformIcons } from "./PlatformIcon";
 import { usePosts } from "../context/PostsContext";
 import { useMessages } from "../context/MessagesContext";
 import { useToast } from "../context/ToastContext";
+import { useSocialAccounts } from "../context/SocialAccountsContext";
+import { formatCount } from "../lib/socialAccounts";
+import { timeAgo } from "../lib/dates";
 import { PLATFORMS, RANGES, buildReportCsv, computeAnalytics, formatDuration, formatPercent, type RangeId } from "../lib/analytics";
 
 const platformChartColors: Record<Platform, string> = {
@@ -21,6 +24,8 @@ export default function Analytics() {
   const toast = useToast();
   const [range, setRange] = useState<RangeId>("30d");
 
+  const social = useSocialAccounts();
+  const youtube = social.get("youtube");
   const a = useMemo(() => computeAnalytics(posts, messages, range), [posts, messages, range]);
   const rangeLabel = RANGES.find((r) => r.id === range)?.label ?? "";
   const loading = postsLoading || messagesLoading;
@@ -116,6 +121,38 @@ export default function Analytics() {
           );
         })}
       </div>
+
+      {youtube && (
+        <div className="glass rounded-2xl p-5">
+          <div className="flex items-center gap-3 mb-4">
+            {youtube.avatarUrl ? (
+              <img src={youtube.avatarUrl} alt="" referrerPolicy="no-referrer" className="w-10 h-10 rounded-full" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center text-sm font-bold">YT</div>
+            )}
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-bold text-slate-900 truncate">{youtube.displayName}</h3>
+              <p className="text-xs text-slate-500 truncate">
+                YouTube channel{youtube.handle ? ` · ${youtube.handle}` : ""}
+                {youtube.statsUpdatedAt ? ` · updated ${timeAgo(youtube.statsUpdatedAt)}` : ""}
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              ["Subscribers", formatCount(youtube.subscribers)],
+              ["Total views", formatCount(youtube.viewCount)],
+              ["Videos", formatCount(youtube.videoCount)],
+            ].map(([label, value]) => (
+              <div key={label} className="glass-light rounded-xl p-3">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider">{label}</p>
+                <p className="text-xl font-bold text-slate-900 mt-1">{value}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-500 mt-3">These numbers come straight from YouTube. They are channel totals, not limited to the time range above.</p>
+        </div>
+      )}
 
       {!loading && noData && (
         <div className="glass rounded-2xl p-8 text-center">

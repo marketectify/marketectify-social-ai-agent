@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { Search, Bell, ChevronDown, Plus, Menu, LogOut, Info } from "lucide-react";
+import { Search, Bell, ChevronDown, Plus, Menu, LogOut, Info, X, Loader2 } from "lucide-react";
 import type { Platform } from "../types";
 import type { Theme } from "../theme";
 import ThemeToggle from "./ThemeToggle";
 import { platformIcons } from "./PlatformIcon";
 import { platformLabels } from "../data";
 import { useAuth } from "../context/AuthContext";
+import { useSocialAccounts } from "../context/SocialAccountsContext";
+import { useToast } from "../context/ToastContext";
+import { formatCount } from "../lib/socialAccounts";
 
 interface TopNavProps {
   onMenuClick: () => void;
@@ -26,6 +29,30 @@ export default function TopNav({ onMenuClick, theme, onToggleTheme }: TopNavProp
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const isDemo = mode === "demo";
+  const social = useSocialAccounts();
+  const toast = useToast();
+  const [connecting, setConnecting] = useState<Platform | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  const connect = async (p: Platform) => {
+    setConnecting(p);
+    try {
+      await social.connect(p);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not start the connection.");
+      setConnecting(null);
+    }
+  };
+  const disconnect = async (id: string) => {
+    try {
+      await social.disconnect(id);
+      toast.success("Account disconnected");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not disconnect.");
+    } finally {
+      setConfirmId(null);
+    }
+  };
   const name = workspace?.name ?? "Workspace";
 
   useEffect(() => {
@@ -135,6 +162,7 @@ export default function TopNav({ onMenuClick, theme, onToggleTheme }: TopNavProp
         <span className="text-xs font-medium text-slate-500 shrink-0 mr-1">{isDemo ? "Connected:" : "Accounts:"}</span>
         {platforms.map((p) => {
           const Icon = platformIcons[p];
+          const account = social.get(p);
           return (
             <div
               key={p}
@@ -147,9 +175,42 @@ export default function TopNav({ onMenuClick, theme, onToggleTheme }: TopNavProp
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                   <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Connected</span>
                 </span>
+              ) : account ? (
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium max-w-[120px] truncate" title={account.displayName}>
+                    {account.displayName}
+                  </span>
+                  {account.subscribers !== null && (
+                    <span className="text-[10px] text-slate-500">{formatCount(account.subscribers)} subs</span>
+                  )}
+                  {confirmId === account.id ? (
+                    <>
+                      <button onClick={() => void disconnect(account.id)} className="text-[10px] font-semibold text-red-600 hover:underline">
+                        Disconnect
+                      </button>
+                      <button onClick={() => setConfirmId(null)} className="text-[10px] text-slate-500 hover:underline">
+                        Keep
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => setConfirmId(account.id)} aria-label={`Disconnect ${platformLabels[p]}`} className="text-slate-400 hover:text-red-600">
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </span>
+              ) : social.connectable.includes(p) ? (
+                <button
+                  onClick={() => void connect(p)}
+                  disabled={connecting !== null}
+                  className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 dark:text-blue-300 hover:underline disabled:opacity-50"
+                >
+                  {connecting === p && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Connect
+                </button>
               ) : (
-                <span className="text-[10px] text-slate-500 font-medium" title="Account connections arrive in an upcoming update">
-                  Not connected
+                <span className="text-[10px] text-slate-500 font-medium" title="Needs approval from the platform. Coming later.">
+                  Coming soon
                 </span>
               )}
             </div>
