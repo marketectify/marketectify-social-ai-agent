@@ -5,6 +5,7 @@ import {
   Inbox,
   BarChart3,
   Zap,
+  Palette,
 } from "lucide-react";
 import type { TabId } from "../types";
 
@@ -18,6 +19,7 @@ interface SidebarProps {
 const navItems: { id: TabId; label: string; icon: typeof LayoutDashboard; description: string }[] = [
   { id: "overview", label: "Dashboard", icon: LayoutDashboard, description: "Key metrics & quick actions" },
   { id: "studio", label: "AI Content Studio", icon: Sparkles, description: "Generate captions, reels & visuals" },
+  { id: "design", label: "Design Studio", icon: Palette, description: "Drag & drop post designer" },
   { id: "calendar", label: "Calendar & Approvals", icon: CalendarClock, description: "Schedule & approve content" },
   { id: "inbox", label: "Unified Inbox", icon: Inbox, description: "Comments, DMs & AI replies" },
   { id: "analytics", label: "Analytics & Leads", icon: BarChart3, description: "Performance & lead reports" },
