@@ -144,10 +144,29 @@ TikTok and YouTube, so they will appear after those connections are built, not b
 
 ## Design Studio
 
-Nothing to set up. Open **Design Studio**, drag a heading, paragraph, box, circle or picture onto the canvas
-(or drop a picture file from your computer), pick a background (colour, blend or picture) and press **Download PNG**.
-Designs you press **Save** on are kept in the browser on that computer. They are not in the database yet, so they
-do not follow you to another computer. Download the PNG to keep a permanent copy.
+Open **Design Studio**, drag a heading, paragraph, box, circle or picture onto the canvas (or drop a picture file
+from your computer), pick a background (colour, blend or picture) and press **Download PNG** or **Use in post**.
+
+- **Many designs:** **Save** keeps the design; **New design** starts a fresh canvas; **Save as copy** makes a second
+  design from the one you have open. Every saved design appears under **My designs** and you can open any of them.
+  Picking a template while a saved design is open starts a new design, so the saved one is never overwritten.
+- **Use in post:** turns the design into a picture and opens the post form with it attached. Choose platforms and a
+  date, then **Send for approval** or **Approve & schedule** like any other post. The picture shows in the Calendar.
+- Designs you press **Save** on are kept in the browser on that computer. They are not in the database yet, so they
+  do not follow you to another computer. A design you send to a post is stored with the post and is safe.
+
+### Run `0008_post_media.sql` (needed for "Use in post" in real mode)
+
+Supabase -> SQL Editor -> paste `supabase/migrations/0008_post_media.sql` -> Run. It adds the picture columns to
+posts and creates the public storage bucket `post-media` (only the workspace owner can add or delete files in
+their own folder). In demo mode pictures are kept in the browser instead.
+
+### AI pictures (paid Gemini feature)
+
+The **AI picture** box in the Design Studio makes a picture from a description. Run `0007_media_quota.sql` once
+(its own small daily limit, default 10 pictures per user per day, secret `AI_IMAGE_DAILY_LIMIT`). Picture models are
+paid: billing must be on for the Google project that owns `GEMINI_API_KEY`. The model list can be changed with the
+optional secret `GEMINI_IMAGE_MODEL`. The function `generate-image` is deployed by the same GitHub Action.
 
 ## Help assistant
 

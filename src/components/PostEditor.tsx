@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertCircle, Check, Clock, Loader2, Trash2, X } from "lucide-react";
-import type { Platform, Post, PostInput, PostStatus } from "../types";
+import { AlertCircle, Check, Clock, ImagePlus, Loader2, Trash2, X } from "lucide-react";
+import type { Platform, Post, PostInput, PostMedia, PostStatus } from "../types";
 import { platformLabels } from "../data";
 import { platformIcons } from "./PlatformIcon";
 import { usePosts } from "../context/PostsContext";
@@ -22,12 +22,15 @@ interface PostEditorProps {
   /** Day pre-selected when creating a post from the calendar. */
   defaultDate?: Date;
   /** Values to pre-fill when creating a new post (for example from the AI Studio). */
-  initial?: Partial<Pick<PostInput, "title" | "caption" | "hashtags" | "platforms">>;
+  initial?: Partial<Pick<PostInput, "title" | "caption" | "hashtags" | "platforms">> & {
+    /** A finished picture (for example from the Design Studio) that is uploaded when the post is saved. */
+    mediaFile?: Blob;
+  };
   onClose: () => void;
 }
 
 export default function PostEditor({ post, defaultDate, initial, onClose }: PostEditorProps) {
-  const { createPost, updatePost, deletePost } = usePosts();
+  const { createPost, updatePost, deletePost, uploadMedia, discardMedia } = usePosts();
   const toast = useToast();
   const isNew = post === null;
   const status: PostStatus = post?.status ?? "draft";
@@ -40,6 +43,11 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
   const [schedule, setSchedule] = useState(
     post ? toLocalInputValue(post.scheduledAt) : defaultSchedule(defaultDate),
   );
+  // The picture of the post: one that is already stored, or a new file waiting to be uploaded on save.
+  const [media, setMedia] = useState<PostMedia | null>(post?.media ?? null);
+  const [pendingFile, setPendingFile] = useState<Blob | null>(initial?.mediaFile ?? null);
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -53,6 +61,26 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  useEffect(() => {
+    if (!pendingFile) {
+      setPendingUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(pendingFile);
+    setPendingUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingFile]);
+
+  const pickFile = (file: File | undefined) => {
+    if (!file) return;
+    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+      setError("Please choose a PNG, JPG or WebP picture.");
+      return;
+    }
+    setError(null);
+    setPendingFile(file);
+  };
 
   const togglePlatform = (p: Platform) =>
     setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
@@ -79,17 +107,27 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     }
     setError(null);
     setBusy(kind);
-    const input: PostInput = {
-      title: title.trim(),
-      caption: caption.trim(),
-      hashtags: parseHashtags(hashtagText),
-      platforms,
-      status: target,
-      scheduledAt: fromLocalInputValue(schedule),
-    };
+    let uploaded: PostMedia | null = null;
     try {
-      if (post) await updatePost(post.id, input);
-      else await createPost(input);
+      if (pendingFile) uploaded = await uploadMedia(pendingFile, "image");
+      const input: PostInput = {
+        title: title.trim(),
+        caption: caption.trim(),
+        hashtags: parseHashtags(hashtagText),
+        platforms,
+        status: target,
+        scheduledAt: fromLocalInputValue(schedule),
+        media: uploaded ?? media,
+      };
+      try {
+        if (post) await updatePost(post.id, input);
+        else await createPost(input);
+      } catch (e) {
+        if (uploaded) void discardMedia(uploaded.url); // do not leave a file nobody uses
+        throw e;
+      }
+      // The old picture was replaced or removed: delete the file that is no longer used.
+      if (post?.media && post.media.url !== input.media?.url) void discardMedia(post.media.url);
       toast.success(successMessage);
       onClose();
     } catch (e) {
@@ -217,6 +255,56 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
                 </span>
               ))}
             </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-slate-600 mb-1.5">Picture</p>
+            {(pendingUrl ?? media?.url) ? (
+              <div className="flex items-start gap-3">
+                <img
+                  src={pendingUrl ?? media?.url}
+                  alt="Picture of this post"
+                  className="w-28 h-28 object-cover rounded-xl border border-slate-200 bg-slate-100/50"
+                />
+                {!locked && (
+                  <div className="flex flex-col gap-2">
+                    <button type="button" onClick={() => fileInput.current?.click()} className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100/60">
+                      Change picture
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingFile(null);
+                        setMedia(null);
+                      }}
+                      className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-500/10"
+                    >
+                      Remove picture
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={locked}
+                onClick={() => fileInput.current?.click()}
+                className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-slate-300 text-sm text-slate-700 hover:bg-slate-100/50 disabled:opacity-60"
+              >
+                <ImagePlus className="w-4 h-4" aria-hidden="true" /> Add a picture
+              </button>
+            )}
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              aria-label="Choose a picture file"
+              onChange={(e) => {
+                pickFile(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
           </div>
 
           <fieldset disabled={locked}>
