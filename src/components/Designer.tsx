@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import AiPicturePanel from "./AiPicturePanel";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BringToFront, Circle, Copy, Download, FolderOpen, Heading, ImagePlus, Palette,
   Redo2, Save, SendToBack, Square, Trash2, Type, Undo2,
@@ -408,6 +409,12 @@ export default function Designer() {
               ))}
             </div>
           </div>
+
+          <AiPicturePanel
+            width={design.width}
+            height={design.height}
+            onPicture={(file, as) => (as === "item" ? addImageFile(file) : setBackgroundImage(file))}
+          />
         </div>
 
         {/* Centre: canvas */}
