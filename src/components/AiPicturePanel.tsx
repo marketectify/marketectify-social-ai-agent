@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
-import { useAuth } from "../context/AuthContext";
+import { Loader2, Lock, Sparkles } from "lucide-react";
+import { usePlan } from "../context/PlanContext";
+import { AIError } from "../lib/ai";
 import { generateImage, nearestAspect, IMAGE_LIMITS, IMAGE_STYLES, type ImageStyle } from "../lib/aiImage";
 
 const STYLE_LABELS: Record<ImageStyle, string> = {
@@ -21,8 +22,7 @@ interface Props {
 
 /** "AI picture" box in the Design Studio: describe a picture, get one made by Gemini. */
 export default function AiPicturePanel({ width, height, onPicture }: Props) {
-  const { mode } = useAuth();
-  const demo = mode === "demo";
+  const { isPro, requirePro, showUpgrade } = usePlan();
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState<ImageStyle>("photo");
   const [busy, setBusy] = useState(false);
@@ -31,7 +31,8 @@ export default function AiPicturePanel({ width, height, onPicture }: Props) {
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
 
   const make = async () => {
-    if (busy || demo) return;
+    if (busy) return;
+    if (!requirePro("ai-picture")) return; // free accounts see the upgrade window
     setBusy(true);
     setError(null);
     try {
@@ -42,7 +43,8 @@ export default function AiPicturePanel({ width, height, onPicture }: Props) {
         return { file: out.file, url: URL.createObjectURL(out.file) };
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not make the picture. Please try again.");
+      if (e instanceof AIError && e.code === "upgrade_required") showUpgrade("ai-picture");
+      else setError(e instanceof Error ? e.message : "Could not make the picture. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -60,10 +62,9 @@ export default function AiPicturePanel({ width, height, onPicture }: Props) {
     <div className="glass rounded-2xl p-4 space-y-2.5">
       <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-blue-600 dark:text-blue-400" aria-hidden="true" /> AI picture
+        {!isPro && <ProBadge />}
       </h3>
-      {demo ? (
-        <p role="status" className="text-[11px] text-amber-900 dark:text-amber-300">AI pictures need a signed-in account (not available in demo mode).</p>
-      ) : (
+      {
         <>
           <label className="sr-only" htmlFor="ai-picture-prompt">Describe the picture</label>
           <textarea
@@ -82,10 +83,10 @@ export default function AiPicturePanel({ width, height, onPicture }: Props) {
           <button
             type="button"
             onClick={() => void make()}
-            disabled={busy || prompt.trim().length < IMAGE_LIMITS.promptMin}
+            disabled={busy || (isPro && prompt.trim().length < IMAGE_LIMITS.promptMin)}
             className="w-full h-9 rounded-lg bg-blue-600 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50 inline-flex items-center justify-center gap-1.5"
           >
-            {busy ? <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Making the picture…</> : "Make picture"}
+            {busy ? <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Making the picture…</> : isPro ? "Make picture" : <><Lock className="w-3.5 h-3.5" aria-hidden="true" /> Make picture</>}
           </button>
           {error && <p role="alert" className="text-[11px] text-red-800 dark:text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg p-2">{error}</p>}
           {result && (
@@ -101,7 +102,11 @@ export default function AiPicturePanel({ width, height, onPicture }: Props) {
             {usage ? `Pictures today: ${usage.used}/${usage.limit}. ` : ""}Each picture uses a paid Gemini feature, so there is a small daily limit.
           </p>
         </>
-      )}
+      }
     </div>
   );
+}
+
+export function ProBadge() {
+  return <span className="ml-auto text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-blue-600 text-white">PRO</span>;
 }

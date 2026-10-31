@@ -40,6 +40,8 @@ export interface ImageDeps {
   dailyLimit: number;
   geminiConfigured: boolean;
   getUser: (authorization: string | null) => Promise<{ id: string } | null>;
+  /** The plan of the signed-in user. Pictures are a paid feature. */
+  getPlan: (authorization: string) => Promise<"free" | "pro">;
   consumeQuota: (authorization: string, limit: number) => Promise<{ allowed: boolean; used: number }>;
   releaseQuota: (authorization: string) => Promise<void>;
   callGemini: (model: string, body: unknown) => Promise<{ status: number; body: unknown }>;
@@ -240,6 +242,15 @@ export async function handleImage(req: Request, deps: ImageDeps): Promise<Respon
   }
   const checked = validateImageRequest(parsed);
   if (!checked.ok) return fail(400, "invalid_request", checked.message);
+
+  try {
+    if ((await deps.getPlan(authorization)) !== "pro") {
+      return fail(402, "upgrade_required", "AI pictures are part of the Pro plan. Upgrade your account to use them.");
+    }
+  } catch (e) {
+    deps.log?.(`image: plan check failed: ${e instanceof Error ? e.message : String(e)}`);
+    return fail(500, "plan_unavailable", "Could not check your plan. Has the database setup (0009) been run?");
+  }
 
   let quota: { allowed: boolean; used: number };
   try {

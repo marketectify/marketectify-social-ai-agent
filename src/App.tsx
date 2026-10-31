@@ -14,6 +14,7 @@ import Login, { SetNewPassword } from "./components/Login";
 import { useTheme, type Theme } from "./theme";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { PostsProvider } from "./context/PostsContext";
+import { PlanProvider } from "./context/PlanContext";
 import { createLocalMediaStore, createSupabaseMediaStore, type MediaStore } from "./lib/mediaStore";
 import { MessagesProvider } from "./context/MessagesContext";
 import { ToastProvider } from "./context/ToastContext";
@@ -153,7 +154,9 @@ function Gate({ theme, onToggleTheme }: ThemeProps) {
     // `key` makes sure nothing from a previous account leaks into the next one.
     <PostsProvider key={user.id + (workspace?.id ?? "")} repo={repo} media={mediaStore}>
       <MessagesProvider repo={messagesRepo}>
-        <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
+        <PlanProvider>
+          <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
+        </PlanProvider>
       </MessagesProvider>
     </PostsProvider>
   );
