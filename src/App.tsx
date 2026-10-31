@@ -6,6 +6,7 @@ import TopNav from "./components/TopNav";
 import Overview from "./components/Overview";
 import Studio from "./components/Studio";
 import Designer from "./components/Designer";
+import HelpAssistant from "./components/HelpAssistant";
 import Calendar from "./components/Calendar";
 import Inbox from "./components/Inbox";
 import Analytics from "./components/Analytics";
@@ -76,6 +77,7 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
           {activeTab === "analytics" && <Analytics />}
         </main>
       </div>
+      <HelpAssistant />
     </div>
   );
 }

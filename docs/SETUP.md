@@ -149,6 +149,14 @@ Nothing to set up. Open **Design Studio**, drag a heading, paragraph, box, circl
 Designs you press **Save** on are kept in the browser on that computer. They are not in the database yet, so they
 do not follow you to another computer. Download the PNG to keep a permanent copy.
 
+## Help assistant
+
+The round **Help** button at the bottom right of every page opens a chat that answers questions about this app
+(how to use each tab, what secrets are needed, what to do on an error). It uses the same `GEMINI_API_KEY` as the AI
+Studio and the same daily limit, so there is nothing new to set up. It only works when signed in (not in demo mode).
+The function is `help-assistant`; it is deployed by the same GitHub Action as the other functions.
+Its knowledge lives in `supabase/functions/help-assistant/logic.ts` (`APP_GUIDE`): when you add a feature, add a line there.
+
 ## Hostinger by FTP (if the GitHub connection breaks)
 
 Hostinger can lose its GitHub link (for example when a second GitHub account is connected to the same Hostinger

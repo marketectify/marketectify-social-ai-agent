@@ -15,6 +15,7 @@ Built with React, TypeScript, Vite and Tailwind CSS. Accounts and data use Supab
 - Inbox: add customer comments and DMs, AI reply drafts in your tone and language, track replied / unread
 - Analytics and leads from your real posts and messages: reply rate, response time, lead funnel, posts per month, CSV export
 - Design Studio: drag and drop post designer (headings, paragraphs, pictures, shapes, backgrounds, templates), download as PNG
+- Help assistant: floating chat (Gemini) that answers questions about how to use the app
 - Light and dark themes
 
 
