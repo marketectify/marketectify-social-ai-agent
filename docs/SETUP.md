@@ -149,6 +149,19 @@ Nothing to set up. Open **Design Studio**, drag a heading, paragraph, box, circl
 Designs you press **Save** on are kept in the browser on that computer. They are not in the database yet, so they
 do not follow you to another computer. Download the PNG to keep a permanent copy.
 
+## Hostinger by FTP (if the GitHub connection breaks)
+
+Hostinger can lose its GitHub link (for example when a second GitHub account is connected to the same Hostinger
+account). The site can then be uploaded by FTP instead, straight from GitHub Actions:
+
+1. Hostinger -> Websites -> your site -> **Files -> FTP Accounts**. Note the **host**, **username**, and the **folder**
+   (usually `/domains/<your-domain>/public_html/`). Set or reset the FTP password there.
+2. GitHub -> repository -> Settings -> Secrets and variables -> Actions -> **Repository secrets**. Add
+   `FTP_SERVER` (the host), `FTP_USERNAME`, `FTP_PASSWORD` and `FTP_DIR` (the folder, ending with `/`).
+3. Merge any pull request (or run **Publish site to deploy branch** by hand). The action uploads the built site.
+
+If the FTP secrets are missing the step is skipped. Never share the FTP password in chat.
+
 ---
 
 ## Local development
