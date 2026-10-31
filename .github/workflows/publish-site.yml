@@ -54,6 +54,8 @@ jobs:
           # Public values (safe in the browser). Without them the site runs in demo mode.
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # Optional: email or https address behind the "Upgrade" button.
+          VITE_UPGRADE_CONTACT: ${{ secrets.VITE_UPGRADE_CONTACT }}
         run: |
           npm ci
           npm run build
