@@ -46,7 +46,12 @@ function PostChip({ post, onOpen, compact }: { post: Post; onOpen: (p: Post) => 
         compact ? "px-1.5 py-1" : "px-2 py-1.5"
       }`}
     >
-      <p className={`font-semibold truncate ${compact ? "text-[10px]" : "text-xs"}`}>{post.title}</p>
+      <div className="flex items-center gap-1.5">
+        {post.media?.kind === "image" && (
+          <img src={post.media.url} alt="" className={`shrink-0 rounded object-cover ${compact ? "w-4 h-4" : "w-6 h-6"}`} loading="lazy" />
+        )}
+        <p className={`font-semibold truncate ${compact ? "text-[10px]" : "text-xs"}`}>{post.title}</p>
+      </div>
       {when && <p className="text-[10px] text-white/90">{when}</p>}
     </button>
   );

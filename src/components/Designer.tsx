@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import AiPicturePanel from "./AiPicturePanel";
+import PostEditor from "./PostEditor";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BringToFront, Circle, Copy, Download, FolderOpen, Heading, ImagePlus, Palette,
-  Redo2, Save, SendToBack, Square, Trash2, Type, Undo2,
+  FilePlus2, Redo2, Save, Send, SendToBack, Square, Trash2, Type, Undo2,
 } from "lucide-react";
 import {
   FONT_LABELS, FONT_STACKS, LIMITS, PRESETS, TEMPLATES, blankDesign, duplicateElement, fitTextHeights, fontString, layoutText,
@@ -49,6 +51,9 @@ export default function Designer() {
   const [saved, setSaved] = useState<SavedDesign[]>(() => loadDesigns(storage(), workspaceId));
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [name, setName] = useState("Untitled design");
+  // What was last saved or opened, to tell whether there are unsaved changes.
+  const [baseline, setBaseline] = useState(() => JSON.stringify([blankDesign(), "Untitled design"]));
+  const [postDraft, setPostDraft] = useState<{ title: string; file: Blob } | null>(null);
   const [exporting, setExporting] = useState(false);
   const [dropping, setDropping] = useState(false);
   const [stageWidth, setStageWidth] = useState(0);
@@ -270,39 +275,84 @@ export default function Designer() {
     }
   };
 
-  const saveCurrent = async () => {
+  const dirty = JSON.stringify([design, name]) !== baseline;
+  const confirmDiscard = () => !dirty || window.confirm("You have unsaved changes in this design. Leave without saving?");
+
+  const newId = () => `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+  const startFresh = (fresh: Design, freshName: string) => {
+    setHistory(startHistory(fresh));
+    setCurrentId(null);
+    setName(freshName);
+    setSelectedId(null);
+    setBaseline(JSON.stringify([fresh, freshName]));
+  };
+  const newDesign = () => {
+    if (!confirmDiscard()) return;
+    startFresh(blankDesign(), "Untitled design");
+  };
+
+  /** Make a picture to use in a post: JPEG, at most 1080 pixels wide. */
+  const useInPost = async () => {
+    setExporting(true);
+    try {
+      const canvas = await renderToCanvas(Math.min(design.width, 1080));
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.9));
+      if (!blob) throw new Error("Could not create the picture.");
+      setPostDraft({ title: name.trim() || "New post", file: blob });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not create the picture.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const saveCurrent = async (asCopy = false) => {
     try {
       const thumb = (await renderToCanvas(240)).toDataURL("image/jpeg", 0.7);
-      const id = currentId ?? `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
-      const next = upsertDesign(saved, { id, name: name.trim().slice(0, 80) || "Untitled design", updatedAt: new Date().toISOString(), thumb, design });
+      const id = asCopy || !currentId ? newId() : currentId;
+      const saveName = (asCopy ? `${name.trim().slice(0, 70)} copy` : name).trim().slice(0, 80) || "Untitled design";
+      const next = upsertDesign(saved, { id, name: saveName, updatedAt: new Date().toISOString(), thumb, design });
       if (!saveDesigns(storage(), workspaceId, next)) {
         toast.error("This browser has no room left to save. Delete an old design or use smaller pictures.");
         return;
       }
       setSaved(next);
       setCurrentId(id);
-      toast.success("Design saved in this browser");
+      setName(saveName);
+      setBaseline(JSON.stringify([design, saveName]));
+      toast.success(asCopy ? "Saved as a new design" : "Design saved in this browser");
     } catch {
       toast.error("Could not save the design.");
     }
   };
 
   const openSaved = (item: SavedDesign) => {
+    if (item.id !== currentId && !confirmDiscard()) return;
     setHistory(startHistory(item.design));
     setCurrentId(item.id);
     setName(item.name);
     setSelectedId(null);
+    setBaseline(JSON.stringify([item.design, item.name]));
   };
   const deleteSaved = (id: string) => {
     const next = saved.filter((d) => d.id !== id);
     saveDesigns(storage(), workspaceId, next);
     setSaved(next);
-    if (currentId === id) setCurrentId(null);
+    if (currentId === id) {
+      setCurrentId(null);
+      setBaseline("");
+    }
   };
   const applyTemplate = (id: string) => {
     const t = TEMPLATES.find((x) => x.id === id);
     if (!t) return;
     const preset = PRESETS.find((p) => p.width === design.width && p.height === design.height) ?? PRESETS[0];
+    // A template on top of a saved design starts a NEW design, so the saved one is never overwritten.
+    if (currentId) {
+      setCurrentId(null);
+      setName(t.label);
+    }
     commit(() => normalize(t.build(preset)));
     setSelectedId(null);
   };
@@ -331,19 +381,25 @@ export default function Designer() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="sr-only" htmlFor="design-size">Canvas size</label>
-          <select id="design-size" value={presetId} onChange={(e) => { const p = PRESETS.find((x) => x.id === e.target.value); if (p) commit((d) => resizeCanvas(d, p.width, p.height)); }} className={`${inputCls} w-auto`}>
+          <select id="design-size" value={presetId} onChange={(e) => { const p = PRESETS.find((x) => x.id === e.target.value); if (p) commit((d) => resizeCanvas(d, p.width, p.height)); }} className={`${inputCls} !w-auto`}>
             {PRESETS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
           <label className="sr-only" htmlFor="design-template">Start from a template</label>
-          <select id="design-template" value="" onChange={(e) => applyTemplate(e.target.value)} className={`${inputCls} w-auto`}>
+          <select id="design-template" value="" onChange={(e) => applyTemplate(e.target.value)} className={`${inputCls} !w-auto`}>
             <option value="" disabled>Start from template…</option>
             {TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
           </select>
           <button onClick={() => setHistory(undo)} disabled={history.past.length === 0} className={btnCls} aria-label="Undo" title="Undo (Ctrl+Z)"><Undo2 className="w-4 h-4" /></button>
           <button onClick={() => setHistory(redo)} disabled={history.future.length === 0} className={btnCls} aria-label="Redo" title="Redo (Ctrl+Y)"><Redo2 className="w-4 h-4" /></button>
           <label className="sr-only" htmlFor="design-name">Design name</label>
-          <input id="design-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} className={`${inputCls} w-40`} />
-          <button onClick={() => void saveCurrent()} className={btnCls}><Save className="w-4 h-4" /> Save</button>
+          <input id="design-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} className={`${inputCls} !w-40`} />
+          <button onClick={newDesign} className={btnCls}><FilePlus2 className="w-4 h-4" /> New design</button>
+          <button onClick={() => void saveCurrent()} className={btnCls}><Save className="w-4 h-4" /> {currentId ? "Save changes" : "Save"}</button>
+          {currentId && <button onClick={() => void saveCurrent(true)} className={btnCls}><Copy className="w-4 h-4" /> Save as copy</button>}
+          <span role="status" className={`text-[11px] ${dirty ? "text-amber-700 dark:text-amber-400" : "text-slate-500"}`}>
+            {dirty ? "Unsaved changes" : currentId ? "Saved" : ""}
+          </span>
+          <button onClick={() => void useInPost()} disabled={exporting} className={btnCls}><Send className="w-4 h-4" /> Use in post</button>
           <button onClick={() => void exportPng()} disabled={exporting} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-blue-600 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
             <Download className="w-4 h-4" /> {exporting ? "Preparing…" : "Download PNG"}
           </button>
@@ -408,6 +464,12 @@ export default function Designer() {
               ))}
             </div>
           </div>
+
+          <AiPicturePanel
+            width={design.width}
+            height={design.height}
+            onPicture={(file, as) => (as === "item" ? addImageFile(file) : setBackgroundImage(file))}
+          />
         </div>
 
         {/* Centre: canvas */}
@@ -501,6 +563,7 @@ export default function Designer() {
           </div>
         </div>
       </div>
+      {postDraft && <PostEditor post={null} initial={{ title: postDraft.title, mediaFile: postDraft.file }} onClose={() => setPostDraft(null)} />}
     </div>
   );
 }

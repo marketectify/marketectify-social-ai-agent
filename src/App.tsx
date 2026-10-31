@@ -14,6 +14,7 @@ import Login, { SetNewPassword } from "./components/Login";
 import { useTheme, type Theme } from "./theme";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { PostsProvider } from "./context/PostsContext";
+import { createLocalMediaStore, createSupabaseMediaStore, type MediaStore } from "./lib/mediaStore";
 import { MessagesProvider } from "./context/MessagesContext";
 import { ToastProvider } from "./context/ToastContext";
 import { supabase } from "./lib/supabase";
@@ -98,6 +99,11 @@ function Gate({ theme, onToggleTheme }: ThemeProps) {
     return supabase && workspace ? createSupabasePostsRepo(supabase, workspace.id) : null;
   }, [mode, workspace]);
 
+  const mediaStore = useMemo<MediaStore>(
+    () => (mode !== "demo" && supabase && workspace ? createSupabaseMediaStore(supabase, workspace.id) : createLocalMediaStore()),
+    [mode, workspace],
+  );
+
   const messagesRepo = useMemo<MessagesRepo | null>(() => {
     if (mode === "demo") {
       let storage: Storage | null = null;
@@ -145,7 +151,7 @@ function Gate({ theme, onToggleTheme }: ThemeProps) {
 
   return (
     // `key` makes sure nothing from a previous account leaks into the next one.
-    <PostsProvider key={user.id + (workspace?.id ?? "")} repo={repo}>
+    <PostsProvider key={user.id + (workspace?.id ?? "")} repo={repo} media={mediaStore}>
       <MessagesProvider repo={messagesRepo}>
         <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
       </MessagesProvider>

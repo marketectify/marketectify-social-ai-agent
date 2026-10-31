@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Platform, Post, PostInput, PostStatus } from "../types";
+import type { Platform, Post, PostInput, PostMedia, PostStatus } from "../types";
 import { demoPosts } from "./demoData";
 
 /** Everything the app needs to store posts. Two implementations: browser storage (demo) and Supabase. */
@@ -113,9 +113,16 @@ interface PostRow {
   platforms: string[];
   status: string;
   scheduled_at: string | null;
+  media_url?: string | null;
+  media_kind?: string | null;
 }
 
-const COLUMNS = "id,title,caption,hashtags,platforms,status,scheduled_at";
+const COLUMNS = "id,title,caption,hashtags,platforms,status,scheduled_at,media_url,media_kind";
+
+function mediaFromRow(row: PostRow): PostMedia | null {
+  if (!row.media_url) return null;
+  return { url: row.media_url, kind: row.media_kind === "video" ? "video" : "image" };
+}
 
 function fromRow(row: PostRow): Post {
   return {
@@ -128,6 +135,7 @@ function fromRow(row: PostRow): Post {
     ),
     status: STATUSES.includes(row.status as PostStatus) ? (row.status as PostStatus) : "draft",
     scheduledAt: row.scheduled_at,
+    media: mediaFromRow(row),
   };
 }
 
@@ -139,6 +147,10 @@ function toRow(patch: Partial<PostInput>) {
   if (patch.platforms !== undefined) row.platforms = patch.platforms;
   if (patch.status !== undefined) row.status = patch.status;
   if (patch.scheduledAt !== undefined) row.scheduled_at = patch.scheduledAt;
+  if (patch.media !== undefined) {
+    row.media_url = patch.media ? patch.media.url : null;
+    row.media_kind = patch.media ? patch.media.kind : null;
+  }
   return row;
 }
 
