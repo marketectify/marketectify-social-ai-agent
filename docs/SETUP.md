@@ -157,6 +157,19 @@ Studio and the same daily limit, so there is nothing new to set up. It only work
 The function is `help-assistant`; it is deployed by the same GitHub Action as the other functions.
 Its knowledge lives in `supabase/functions/help-assistant/logic.ts` (`APP_GUIDE`): when you add a feature, add a line there.
 
+## Hostinger by FTP (if the GitHub connection breaks)
+
+Hostinger can lose its GitHub link (for example when a second GitHub account is connected to the same Hostinger
+account). The site can then be uploaded by FTP instead, straight from GitHub Actions:
+
+1. Hostinger -> Websites -> your site -> **Files -> FTP Accounts**. Note the **host**, **username**, and the **folder**
+   (usually `/domains/<your-domain>/public_html/`). Set or reset the FTP password there.
+2. GitHub -> repository -> Settings -> Secrets and variables -> Actions -> **Repository secrets**. Add
+   `FTP_SERVER` (the host), `FTP_USERNAME`, `FTP_PASSWORD` and `FTP_DIR` (the folder, ending with `/`).
+3. Merge any pull request (or run **Publish site to deploy branch** by hand). The action uploads the built site.
+
+If the FTP secrets are missing the step is skipped. Never share the FTP password in chat.
+
 ---
 
 ## Local development
