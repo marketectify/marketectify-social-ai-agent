@@ -59,3 +59,25 @@ export async function loadImageMap(srcs: string[]): Promise<ImageMap> {
   );
   return map;
 }
+
+/** Turns a picture file into a JPEG data address that is small enough to attach to a post. */
+export async function fileToPostImage(file: File): Promise<string> {
+  if (!IMAGE_TYPES.includes(file.type)) throw new ImageError("Please choose a PNG, JPG, WebP or GIF picture.");
+  if (file.size > MAX_UPLOAD_BYTES) throw new ImageError("This picture is larger than 15 MB. Please choose a smaller one.");
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImage(url);
+    const ratio = Math.min(1, 1350 / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(img.naturalWidth * ratio));
+    canvas.height = Math.max(1, Math.round(img.naturalHeight * ratio));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new ImageError("Your browser could not process this picture.");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.88);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}

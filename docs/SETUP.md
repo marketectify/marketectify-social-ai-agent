@@ -146,6 +146,16 @@ TikTok and YouTube, so they will appear after those connections are built, not b
 
 Nothing to set up. Open **Design Studio**, drag a heading, paragraph, box, circle or picture onto the canvas
 (or drop a picture file from your computer), pick a background (colour, blend or picture) and press **Download PNG**.
+Every design you press **Save** on is a separate entry in **My designs**; open any of them later. **New design**
+starts an empty one (it asks first if you have unsaved changes), and **Save as new** keeps the saved design as it is
+and saves your changes as another one. **Use in a post** opens the post editor with the design attached as the post's
+picture, ready to save as a draft or to schedule.
+
+**One database step for post pictures:** in Supabase open **SQL Editor**, paste the file
+`supabase/migrations/0006_post_images.sql` and press **Run**. It adds a private storage bucket (`post-images`) so
+pictures are saved with the post and only you can see them. Without it posts still work, but saving a post that has a
+picture will show an error. In demo mode pictures are kept in the browser.
+
 Designs you press **Save** on are kept in the browser on that computer. They are not in the database yet, so they
 do not follow you to another computer. Download the PNG to keep a permanent copy.
 

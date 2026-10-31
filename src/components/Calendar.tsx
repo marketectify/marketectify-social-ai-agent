@@ -46,7 +46,7 @@ function PostChip({ post, onOpen, compact }: { post: Post; onOpen: (p: Post) => 
         compact ? "px-1.5 py-1" : "px-2 py-1.5"
       }`}
     >
-      <p className={`font-semibold truncate ${compact ? "text-[10px]" : "text-xs"}`}>{post.title}</p>
+      <p className={`font-semibold truncate ${compact ? "text-[10px]" : "text-xs"}`}>{post.image ? "🖼 " : ""}{post.title}</p>
       {when && <p className="text-[10px] text-white/90">{when}</p>}
     </button>
   );

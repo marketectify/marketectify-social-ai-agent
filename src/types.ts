@@ -25,6 +25,11 @@ export interface Post {
   status: PostStatus;
   /** ISO timestamp, or null for an unscheduled draft */
   scheduledAt: string | null;
+  /**
+   * Picture for the post. In the browser it is a picture address (a data: address
+   * before it is uploaded, a web address afterwards). null or missing means no picture.
+   */
+  image?: string | null;
 }
 
 export type PostInput = Omit<Post, "id">;
