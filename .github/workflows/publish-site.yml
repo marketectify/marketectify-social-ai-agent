@@ -73,3 +73,31 @@ jobs:
           git add -A
           git commit -q -m "deploy: site from main @ ${GITHUB_SHA::7}"
           git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" deploy
+
+      # Optional: upload the built site straight to Hostinger by FTP. This works even when
+      # Hostinger's GitHub connection is broken. It is skipped unless the three FTP secrets exist.
+      - name: Check FTP secrets
+        id: ftp
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          if [ -n "$FTP_SERVER" ] && [ -n "$FTP_USERNAME" ] && [ -n "$FTP_PASSWORD" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "FTP secrets not set: skipping FTP upload (the deploy branch is still updated)."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload site to Hostinger by FTP
+        if: steps.ftp.outputs.ready == 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          local-dir: /tmp/site/
+          # Upload into the folder of the site (set the FTP_DIR secret, for example /domains/social-ai.marketectify.com/public_html/).
+          server-dir: ${{ secrets.FTP_DIR || './' }}
