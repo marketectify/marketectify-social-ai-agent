@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertCircle, Check, Clock, Loader2, Trash2, X } from "lucide-react";
+import { AlertCircle, Check, Clock, ImagePlus, Loader2, Trash2, X } from "lucide-react";
 import type { Platform, Post, PostInput, PostStatus } from "../types";
 import { platformLabels } from "../data";
 import { platformIcons } from "./PlatformIcon";
@@ -10,6 +10,7 @@ import { statusConfig } from "../lib/status";
 import { fromLocalInputValue, toLocalInputValue } from "../lib/dates";
 import { defaultSchedule } from "../lib/schedule";
 import { parseHashtags } from "../lib/hashtags";
+import { fileToPostImage } from "../lib/designImages";
 
 const CAPTION_LIMIT = 2200;
 const ALL_PLATFORMS = Object.keys(platformLabels) as Platform[];
@@ -22,7 +23,7 @@ interface PostEditorProps {
   /** Day pre-selected when creating a post from the calendar. */
   defaultDate?: Date;
   /** Values to pre-fill when creating a new post (for example from the AI Studio). */
-  initial?: Partial<Pick<PostInput, "title" | "caption" | "hashtags" | "platforms">>;
+  initial?: Partial<Pick<PostInput, "title" | "caption" | "hashtags" | "platforms" | "image">>;
   onClose: () => void;
 }
 
@@ -40,6 +41,8 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
   const [schedule, setSchedule] = useState(
     post ? toLocalInputValue(post.scheduledAt) : defaultSchedule(defaultDate),
   );
+  const [image, setImage] = useState<string | null>(post?.image ?? initial?.image ?? null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -86,6 +89,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
       platforms,
       status: target,
       scheduledAt: fromLocalInputValue(schedule),
+      image,
     };
     try {
       if (post) await updatePost(post.id, input);
@@ -95,6 +99,16 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save. Please try again.");
       setBusy(null);
+    }
+  };
+
+  const pickImage = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      setImage(await fileToPostImage(file));
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not use this picture.");
     }
   };
 
@@ -192,6 +206,45 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
               disabled={locked}
               placeholder="Write the post text..."
               onChange={(e) => setCaption(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <span className="text-xs font-semibold text-slate-600 mb-1.5 block">Picture</span>
+            {image ? (
+              <div className="flex items-start gap-3">
+                <img src={image} alt="Post picture" className="w-28 max-h-40 rounded-xl border border-slate-200 object-cover" />
+                {!locked && (
+                  <div className="flex flex-col gap-2">
+                    <button type="button" onClick={() => fileRef.current?.click()} className="text-xs font-semibold text-blue-700 dark:text-blue-300 hover:underline text-left">
+                      Change picture
+                    </button>
+                    <button type="button" onClick={() => setImage(null)} className="text-xs font-semibold text-red-700 dark:text-red-300 hover:underline text-left">
+                      Remove picture
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={locked}
+                onClick={() => fileRef.current?.click()}
+                className="w-full h-20 rounded-xl border border-dashed border-slate-300 text-xs text-slate-600 hover:bg-slate-100/60 flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                <ImagePlus className="w-4 h-4" aria-hidden="true" /> Add a picture (or make one in Design Studio)
+              </button>
+            )}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="sr-only"
+              aria-label="Choose a picture for this post"
+              onChange={(e) => {
+                void pickImage(e.target.files?.[0]);
+                e.target.value = "";
+              }}
             />
           </div>
 

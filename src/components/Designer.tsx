@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BringToFront, Circle, Copy, Download, FolderOpen, Heading, ImagePlus, Palette,
-  Redo2, Save, SendToBack, Square, Trash2, Type, Undo2,
+  FilePlus, Redo2, Save, Send, SendToBack, Square, Trash2, Type, Undo2,
 } from "lucide-react";
 import {
   FONT_LABELS, FONT_STACKS, LIMITS, PRESETS, TEMPLATES, blankDesign, duplicateElement, fitTextHeights, fontString, layoutText,
@@ -10,6 +10,7 @@ import {
 } from "../lib/design";
 import { IMAGE_TYPES, ImageError, loadImageMap, processImageFile } from "../lib/designImages";
 import { loadDesigns, saveDesigns, upsertDesign, type SavedDesign } from "../lib/designStore";
+import PostEditor from "./PostEditor";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 
@@ -50,6 +51,10 @@ export default function Designer() {
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [name, setName] = useState("Untitled design");
   const [exporting, setExporting] = useState(false);
+  const [postDraft, setPostDraft] = useState<{ title: string; image: string } | null>(null);
+  /** What the design looked like when it was last saved or opened (to know about unsaved changes). */
+  const [baseline, setBaseline] = useState(() => JSON.stringify(blankDesign()));
+  const dirty = JSON.stringify(design) !== baseline;
   const [dropping, setDropping] = useState(false);
   const [stageWidth, setStageWidth] = useState(0);
 
@@ -270,10 +275,10 @@ export default function Designer() {
     }
   };
 
-  const saveCurrent = async () => {
+  const saveCurrent = async (asCopy = false) => {
     try {
       const thumb = (await renderToCanvas(240)).toDataURL("image/jpeg", 0.7);
-      const id = currentId ?? `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+      const id = !asCopy && currentId ? currentId : `d-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
       const next = upsertDesign(saved, { id, name: name.trim().slice(0, 80) || "Untitled design", updatedAt: new Date().toISOString(), thumb, design });
       if (!saveDesigns(storage(), workspaceId, next)) {
         toast.error("This browser has no room left to save. Delete an old design or use smaller pictures.");
@@ -281,13 +286,40 @@ export default function Designer() {
       }
       setSaved(next);
       setCurrentId(id);
-      toast.success("Design saved in this browser");
+      setBaseline(JSON.stringify(design));
+      toast.success(asCopy ? "Saved as a new design" : "Design saved in this browser");
     } catch {
       toast.error("Could not save the design.");
     }
   };
 
+  const confirmLeave = () => !dirty || window.confirm("You have changes that are not saved. Continue without saving?");
+
+  const startNew = () => {
+    if (!confirmLeave()) return;
+    const fresh = blankDesign();
+    setHistory(startHistory(fresh));
+    setBaseline(JSON.stringify(fresh));
+    setCurrentId(null);
+    setName("Untitled design");
+    setSelectedId(null);
+  };
+
+  const usePicture = async () => {
+    setExporting(true);
+    try {
+      const canvas = await renderToCanvas(Math.min(design.width, 1350));
+      setPostDraft({ title: name.trim() || "New post", image: canvas.toDataURL("image/jpeg", 0.9) });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not prepare the picture.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const openSaved = (item: SavedDesign) => {
+    if (!confirmLeave()) return;
+    setBaseline(JSON.stringify(item.design));
     setHistory(startHistory(item.design));
     setCurrentId(item.id);
     setName(item.name);
@@ -297,7 +329,10 @@ export default function Designer() {
     const next = saved.filter((d) => d.id !== id);
     saveDesigns(storage(), workspaceId, next);
     setSaved(next);
-    if (currentId === id) setCurrentId(null);
+    if (currentId === id) {
+      setCurrentId(null);
+      setBaseline("");
+    }
   };
   const applyTemplate = (id: string) => {
     const t = TEMPLATES.find((x) => x.id === id);
@@ -343,7 +378,10 @@ export default function Designer() {
           <button onClick={() => setHistory(redo)} disabled={history.future.length === 0} className={btnCls} aria-label="Redo" title="Redo (Ctrl+Y)"><Redo2 className="w-4 h-4" /></button>
           <label className="sr-only" htmlFor="design-name">Design name</label>
           <input id="design-name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} className={`${inputCls} w-40`} />
-          <button onClick={() => void saveCurrent()} className={btnCls}><Save className="w-4 h-4" /> Save</button>
+          <button onClick={startNew} className={btnCls} title="Start a new, empty design"><FilePlus className="w-4 h-4" /> New design</button>
+          <button onClick={() => void saveCurrent()} className={btnCls}><Save className="w-4 h-4" /> {currentId ? "Save changes" : "Save"}</button>
+          {currentId && <button onClick={() => void saveCurrent(true)} className={btnCls} title="Keep the saved design as it is and save this as another one">Save as new</button>}
+          <button onClick={() => void usePicture()} disabled={exporting} className={btnCls} title="Create a post with this picture"><Send className="w-4 h-4" /> Use in a post</button>
           <button onClick={() => void exportPng()} disabled={exporting} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-blue-600 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
             <Download className="w-4 h-4" /> {exporting ? "Preparing…" : "Download PNG"}
           </button>
@@ -501,6 +539,9 @@ export default function Designer() {
           </div>
         </div>
       </div>
+      {postDraft && (
+        <PostEditor post={null} initial={{ title: postDraft.title, image: postDraft.image }} onClose={() => setPostDraft(null)} />
+      )}
     </div>
   );
 }

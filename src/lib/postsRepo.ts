@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Platform, Post, PostInput, PostStatus } from "../types";
 import { demoPosts } from "./demoData";
+import { dataUrlToBlob, imageKind, parseImageDataUrl } from "./postImages";
 
 /** Everything the app needs to store posts. Two implementations: browser storage (demo) and Supabase. */
 export interface PostsRepo {
@@ -30,7 +31,8 @@ function isPost(x: unknown): x is Post {
     Array.isArray(p.platforms) &&
     typeof p.status === "string" &&
     STATUSES.includes(p.status as PostStatus) &&
-    (p.scheduledAt === null || typeof p.scheduledAt === "string")
+    (p.scheduledAt === null || typeof p.scheduledAt === "string") &&
+    (p.image === undefined || p.image === null || typeof p.image === "string")
   );
 }
 
@@ -113,11 +115,14 @@ interface PostRow {
   platforms: string[];
   status: string;
   scheduled_at: string | null;
+  image_path: string | null;
 }
 
-const COLUMNS = "id,title,caption,hashtags,platforms,status,scheduled_at";
+const COLUMNS = "id,title,caption,hashtags,platforms,status,scheduled_at,image_path";
+const BUCKET = "post-images";
+const SIGNED_URL_SECONDS = 60 * 60 * 24;
 
-function fromRow(row: PostRow): Post {
+function fromRow(row: PostRow, imageUrl: string | null = null): Post {
   return {
     id: row.id,
     title: row.title,
@@ -128,6 +133,7 @@ function fromRow(row: PostRow): Post {
     ),
     status: STATUSES.includes(row.status as PostStatus) ? (row.status as PostStatus) : "draft",
     scheduledAt: row.scheduled_at,
+    image: imageUrl,
   };
 }
 
@@ -143,6 +149,39 @@ function toRow(patch: Partial<PostInput>) {
 }
 
 export function createSupabasePostsRepo(client: SupabaseClient, workspaceId: string): PostsRepo {
+  /** Turns the stored file paths into temporary viewing addresses (the bucket is private). */
+  async function signedUrls(paths: string[]): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    if (paths.length === 0) return map;
+    const { data, error } = await client.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_SECONDS);
+    if (error || !data) return map; // posts still load; pictures just do not show
+    for (const item of data) if (item.path && item.signedUrl) map.set(item.path, item.signedUrl);
+    return map;
+  }
+
+  async function upload(dataUrl: string): Promise<string> {
+    const parsed = parseImageDataUrl(dataUrl);
+    const blob = dataUrlToBlob(dataUrl);
+    const path = `${workspaceId}/${newId()}.${parsed?.ext ?? "png"}`;
+    const { error } = await client.storage.from(BUCKET).upload(path, blob, { contentType: blob.type, upsert: false });
+    if (error) throw new Error(`Could not upload the picture: ${error.message}`);
+    return path;
+  }
+
+  /** Works out the image_path column for a create or update. undefined = leave it alone. */
+  async function imagePatch(image: string | null | undefined): Promise<{ image_path?: string | null }> {
+    if (image === undefined) return {};
+    const kind = imageKind(image);
+    if (kind === "none") return { image_path: null };
+    if (kind === "new") return { image_path: await upload(image as string) };
+    return {}; // an existing picture that was not changed
+  }
+
+  async function withUrl(row: PostRow): Promise<Post> {
+    const urls = await signedUrls(row.image_path ? [row.image_path] : []);
+    return fromRow(row, row.image_path ? (urls.get(row.image_path) ?? null) : null);
+  }
+
   return {
     async list() {
       const { data, error } = await client
@@ -152,35 +191,55 @@ export function createSupabasePostsRepo(client: SupabaseClient, workspaceId: str
         .order("scheduled_at", { ascending: true, nullsFirst: false })
         .limit(2000);
       if (error) throw new Error(error.message);
-      return (data as PostRow[]).map(fromRow);
+      const rows = data as PostRow[];
+      const urls = await signedUrls(rows.flatMap((r) => (r.image_path ? [r.image_path] : [])));
+      return rows.map((r) => fromRow(r, r.image_path ? (urls.get(r.image_path) ?? null) : null));
     },
     async create(input) {
+      const extra = await imagePatch(input.image);
       const { data, error } = await client
         .from("posts")
-        .insert({ ...toRow(input), workspace_id: workspaceId })
+        .insert({ ...toRow(input), ...extra, workspace_id: workspaceId })
         .select(COLUMNS)
         .single();
-      if (error) throw new Error(error.message);
-      return fromRow(data as PostRow);
+      if (error) {
+        if (extra.image_path) await client.storage.from(BUCKET).remove([extra.image_path]);
+        throw new Error(error.message);
+      }
+      return withUrl(data as PostRow);
     },
     async update(id, patch) {
+      const changesImage = patch.image !== undefined && imageKind(patch.image) !== "existing";
+      let oldPath: string | null = null;
+      if (changesImage) {
+        const { data: old } = await client.from("posts").select("image_path").eq("id", id).eq("workspace_id", workspaceId).maybeSingle();
+        oldPath = (old as { image_path?: string | null } | null)?.image_path ?? null;
+      }
+      const extra = await imagePatch(patch.image);
       const { data, error } = await client
         .from("posts")
-        .update(toRow(patch))
+        .update({ ...toRow(patch), ...extra })
         .eq("id", id)
         .eq("workspace_id", workspaceId)
         .select(COLUMNS)
         .single();
-      if (error) throw new Error(error.message);
-      return fromRow(data as PostRow);
+      if (error) {
+        if (extra.image_path) await client.storage.from(BUCKET).remove([extra.image_path]);
+        throw new Error(error.message);
+      }
+      if (oldPath && oldPath !== extra.image_path) await client.storage.from(BUCKET).remove([oldPath]);
+      return withUrl(data as PostRow);
     },
     async remove(id) {
+      const { data: row } = await client.from("posts").select("image_path").eq("id", id).eq("workspace_id", workspaceId).maybeSingle();
       const { error } = await client
         .from("posts")
         .delete()
         .eq("id", id)
         .eq("workspace_id", workspaceId);
       if (error) throw new Error(error.message);
+      const path = (row as { image_path?: string | null } | null)?.image_path;
+      if (path) await client.storage.from(BUCKET).remove([path]);
     },
   };
 }
