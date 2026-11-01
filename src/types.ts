@@ -4,7 +4,9 @@ export type TabId =
   | "design"
   | "calendar"
   | "inbox"
-  | "analytics";
+  | "analytics"
+  | "plan"
+  | "admin";
 
 export type Platform = "facebook" | "instagram" | "tiktok" | "youtube";
 
