@@ -88,6 +88,11 @@ export default function AiPicturePanel({ width, height, onPicture }: Props) {
           >
             {busy ? <><Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> Making the picture…</> : isPro ? "Make picture" : <><Lock className="w-3.5 h-3.5" aria-hidden="true" /> Make picture</>}
           </button>
+          {!isPro && (
+            <button type="button" onClick={() => showUpgrade("ai-picture")} className="w-full text-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:underline">
+              Upgrade to Pro to make AI pictures
+            </button>
+          )}
           {error && <p role="alert" className="text-[11px] text-red-800 dark:text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg p-2">{error}</p>}
           {result && (
             <div className="space-y-2">

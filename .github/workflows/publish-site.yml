@@ -56,6 +56,8 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           # Optional: email or https address behind the "Upgrade" button.
           VITE_UPGRADE_CONTACT: ${{ secrets.VITE_UPGRADE_CONTACT }}
+          # Optional: price text on the Plan page, for example "PKR 4,999 / month".
+          VITE_PRO_PRICE: ${{ secrets.VITE_PRO_PRICE }}
         run: |
           npm ci
           npm run build

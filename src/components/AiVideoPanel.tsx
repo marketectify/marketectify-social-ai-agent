@@ -5,7 +5,7 @@ import { ProBadge } from "./AiPicturePanel";
 
 /** "AI video" box in the Design Studio. Free accounts see the upgrade window; making videos is not built yet. */
 export default function AiVideoPanel() {
-  const { isPro, requirePro } = usePlan();
+  const { isPro, requirePro, showUpgrade } = usePlan();
   const [prompt, setPrompt] = useState("");
   const [soon, setSoon] = useState(false);
 
@@ -39,6 +39,11 @@ export default function AiVideoPanel() {
       >
         {!isPro && <Lock className="w-3.5 h-3.5" aria-hidden="true" />} Make video
       </button>
+      {!isPro && (
+        <button type="button" onClick={() => showUpgrade("ai-video")} className="w-full text-center text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:underline">
+          Upgrade to Pro to make AI videos
+        </button>
+      )}
       {soon && (
         <p role="status" className="text-[11px] text-slate-700 bg-blue-500/10 border border-blue-500/20 rounded-lg p-2">
           AI video is coming soon. Your Pro plan will include it as soon as it is ready.
