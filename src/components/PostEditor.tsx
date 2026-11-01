@@ -48,6 +48,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
   const [pendingFile, setPendingFile] = useState<Blob | null>(initial?.mediaFile ?? null);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const platformsRef = useRef<HTMLFieldSetElement>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -103,6 +104,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     const problem = validate(target);
     if (problem) {
       setError(problem);
+      if (/platform/i.test(problem)) platformsRef.current?.scrollIntoView?.({ block: "center", behavior: "smooth" });
       return;
     }
     setError(null);
@@ -307,7 +309,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
             />
           </div>
 
-          <fieldset disabled={locked}>
+          <fieldset ref={platformsRef} disabled={locked}>
             <legend className="text-xs font-semibold text-slate-600 mb-1.5">Publish to</legend>
             <div className="grid grid-cols-2 gap-2">
               {ALL_PLATFORMS.map((p) => {
@@ -351,6 +353,10 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
             </p>
           </div>
 
+        </div>
+
+        {/* Actions. The error sits here (not at the end of the long form) so it is always in view. */}
+        <div className="p-5 border-t border-slate-200 space-y-3">
           {error && (
             <div
               role="alert"
@@ -360,10 +366,6 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
               <span>{error}</span>
             </div>
           )}
-        </div>
-
-        {/* Actions */}
-        <div className="p-5 border-t border-slate-200 space-y-3">
           {!locked && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(status === "draft" || status === "pending") && (
