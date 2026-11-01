@@ -129,6 +129,8 @@ Google AI Studio, delete the old one and update the secret.
 SQL Editor, New query, paste all of `supabase/migrations/0003_messages.sql`, Run. That is all.
 The Inbox uses the same Gemini key and daily limit as the Studio, so nothing else is needed.
 
+**Auto-draft replies:** switch it on at the top of the Inbox. The AI then writes a first reply (up to 5 at a time, 1 AI use each) for new messages, shown with a "Draft ready" badge. You still check and post the reply yourself. **Posting by hand:** open an approved post and use *Copy caption*, *Download picture* and *Mark as published*. Real automatic posting and replying on Facebook, Instagram and TikTok needs each platform's developer app and approval, and is a separate step.
+
 Until Facebook, Instagram, TikTok and YouTube are connected (they need app review by each platform),
 messages are added by hand with **Add message**. The AI drafts the reply, you copy it, post it on the
 platform and press **Mark as replied**.

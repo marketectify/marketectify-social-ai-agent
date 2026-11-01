@@ -22,6 +22,7 @@ import { useToast } from "../context/ToastContext";
 import { MESSAGE_LIMITS } from "../lib/messagesRepo";
 import { timeAgo } from "../lib/dates";
 import { AIError, LANGUAGES, TONES, generate, type ReplyResult } from "../lib/ai";
+import { loadAutoDraft, pickForDrafting, pruneDrafts, saveAutoDraft, type AutoDraftState } from "../lib/autoDraft";
 
 const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok", "youtube"];
 
@@ -46,8 +47,9 @@ const initials = (name: string) =>
 type StatusFilter = "all" | "unread" | "replied";
 
 export default function Inbox() {
-  const { mode } = useAuth();
+  const { mode, workspace } = useAuth();
   const { messages, loading, error, reload, addMessage, updateMessage, deleteMessage } = useMessages();
+  const workspaceId = workspace?.id ?? "demo";
   const toast = useToast();
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -55,6 +57,67 @@ export default function Inbox() {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+
+  // Auto-draft: the AI writes a first reply for new messages. The person still checks and sends it.
+  const storage = () => {
+    try {
+      return window.localStorage;
+    } catch {
+      return null;
+    }
+  };
+  const [auto, setAuto] = useState<AutoDraftState>(() => loadAutoDraft(storage(), workspaceId));
+  const [autoBusy, setAutoBusy] = useState(false);
+  const [autoNotice, setAutoNotice] = useState<string | null>(null);
+  const autoRunning = useRef(false);
+  const demo = mode === "demo";
+
+  const updateAuto = (next: AutoDraftState) => {
+    setAuto(next);
+    saveAutoDraft(storage(), workspaceId, next);
+  };
+
+  useEffect(() => {
+    if (!auto.enabled || demo || loading || autoRunning.current) return;
+    const todo = pickForDrafting(messages, auto.drafts);
+    if (todo.length === 0) return;
+    autoRunning.current = true;
+    setAutoBusy(true);
+    setAutoNotice(null);
+    let drafts = pruneDrafts(auto.drafts, messages);
+    void (async () => {
+      try {
+        for (const m of todo) {
+          const res = await generate({
+            kind: "reply",
+            topic: m.body,
+            tone: "Professional",
+            audience: m.kind === "dm" ? "A customer who sent a direct message" : "A customer who left a comment",
+            language: "English",
+            platform: m.platform,
+            brand: workspace?.name ?? "",
+          });
+          const first = (res.result as ReplyResult).replies[0]?.text;
+          if (first) {
+            drafts = { ...drafts, [m.id]: first };
+            setAuto((prev) => {
+              const next = { ...prev, drafts: { ...prev.drafts, [m.id]: first } };
+              saveAutoDraft(storage(), workspaceId, next);
+              return next;
+            });
+          }
+        }
+      } catch (e) {
+        // Stop at the first problem (daily limit, AI busy ...) and say why, instead of retrying in a loop.
+        setAutoNotice(e instanceof AIError ? e.message : "Auto-draft stopped because something went wrong.");
+        setAuto((prev) => ({ ...prev, enabled: prev.enabled }));
+      } finally {
+        autoRunning.current = false;
+        setAutoBusy(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auto.enabled, demo, loading, messages]);
 
   const unreadCount = messages.filter((m) => m.status === "unread").length;
 
@@ -100,6 +163,38 @@ export default function Inbox() {
           Add message
         </button>
       </div>
+
+      <div className="glass rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+        <label className="flex items-start gap-3 cursor-pointer flex-1">
+          <input
+            type="checkbox"
+            role="switch"
+            checked={auto.enabled}
+            disabled={demo}
+            onChange={(e) => {
+              setAutoNotice(null);
+              updateAuto({ ...auto, enabled: e.target.checked });
+            }}
+            className="mt-1 w-4 h-4 accent-blue-600"
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold text-slate-900">Auto-draft replies</span>
+            <span className="block text-xs text-slate-600">
+              {demo
+                ? "Needs a signed-in account (not available in demo mode)."
+                : "The AI writes a first reply for new messages. You check it, post it, then mark it as replied. Each draft uses 1 AI use; up to 5 are written at a time."}
+            </span>
+          </span>
+        </label>
+        {autoBusy && (
+          <span role="status" className="inline-flex items-center gap-1.5 text-xs text-slate-700">
+            <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" /> Writing drafts…
+          </span>
+        )}
+      </div>
+      {autoNotice && (
+        <p role="alert" className="text-xs text-amber-900 dark:text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-lg p-2">{autoNotice}</p>
+      )}
 
       <div role="status" className="flex gap-2 items-start text-xs text-slate-700 bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
         <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
@@ -216,6 +311,7 @@ export default function Inbox() {
                           {m.kind === "dm" ? "DM" : "Comment"}
                         </span>
                         {m.isLead && <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-emerald-500/15 text-emerald-800 dark:text-emerald-300">Lead</span>}
+                        {auto.drafts[m.id] && m.status !== "replied" && <span className="text-[9px] px-1.5 py-0.5 rounded font-medium bg-violet-500/15 text-violet-800 dark:text-violet-300">Draft ready</span>}
                         {m.status === "replied" && <Check className="w-3 h-3 text-emerald-700 dark:text-emerald-400 shrink-0" aria-label="Replied" />}
                         <p className="text-xs text-slate-500 truncate">{m.body}</p>
                       </div>
@@ -244,6 +340,7 @@ export default function Inbox() {
             <Conversation
               key={selected.id}
               message={selected}
+              suggestion={auto.drafts[selected.id] ?? ""}
               demo={mode === "demo"}
               onMarkReplied={async (reply) => {
                 await updateMessage(selected.id, { status: "replied", reply, repliedAt: new Date().toISOString() });
@@ -277,6 +374,7 @@ export default function Inbox() {
 
 function Conversation({
   message,
+  suggestion,
   demo,
   onMarkReplied,
   onMarkUnreplied,
@@ -284,6 +382,8 @@ function Conversation({
   onDelete,
 }: {
   message: Message;
+  /** A reply the AI wrote earlier (auto-draft). Used when the box is still empty. */
+  suggestion: string;
   demo: boolean;
   onMarkReplied: (reply: string) => Promise<void>;
   onMarkUnreplied: () => Promise<void>;
@@ -295,7 +395,11 @@ function Conversation({
   const Icon = platformIcons[message.platform];
   const brand = workspace?.name ?? "";
 
-  const [draft, setDraft] = useState(message.reply ?? "");
+  const [draft, setDraft] = useState(message.reply ?? suggestion);
+  useEffect(() => {
+    // The auto-draft may arrive after the message was opened.
+    if (suggestion) setDraft((d) => (d.trim() ? d : suggestion));
+  }, [suggestion]);
   const [tone, setTone] = useState<(typeof TONES)[number]>("Professional");
   const [language, setLanguage] = useState<(typeof LANGUAGES)[number]>("English");
   const [options, setOptions] = useState<string[]>([]);
