@@ -1,9 +1,12 @@
 export type TabId =
   | "overview"
   | "studio"
+  | "design"
   | "calendar"
   | "inbox"
-  | "analytics";
+  | "analytics"
+  | "plan"
+  | "admin";
 
 export type Platform = "facebook" | "instagram" | "tiktok" | "youtube";
 
@@ -15,6 +18,12 @@ export type Platform = "facebook" | "instagram" | "tiktok" | "youtube";
  */
 export type PostStatus = "draft" | "pending" | "approved" | "published";
 
+/** A picture or video attached to a post. `url` is a public address (or, in demo mode, a data address). */
+export interface PostMedia {
+  url: string;
+  kind: "image" | "video";
+}
+
 export interface Post {
   id: string;
   title: string;
@@ -24,6 +33,8 @@ export interface Post {
   status: PostStatus;
   /** ISO timestamp, or null for an unscheduled draft */
   scheduledAt: string | null;
+  /** Optional picture or video that goes with the post. */
+  media?: PostMedia | null;
 }
 
 export type PostInput = Omit<Post, "id">;

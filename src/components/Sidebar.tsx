@@ -5,8 +5,12 @@ import {
   Inbox,
   BarChart3,
   Zap,
+  Palette,
+  CreditCard,
+  ShieldCheck,
 } from "lucide-react";
 import type { TabId } from "../types";
+import { usePlan } from "../context/PlanContext";
 
 interface SidebarProps {
   activeTab: TabId;
@@ -16,14 +20,20 @@ interface SidebarProps {
 }
 
 const navItems: { id: TabId; label: string; icon: typeof LayoutDashboard; description: string }[] = [
-  { id: "overview", label: "Dashboard", icon: LayoutDashboard, description: "Key metrics & quick actions" },
+  { id: "overview", label: "Dashboard", icon: LayoutDashboard, description: "What needs you today" },
   { id: "studio", label: "AI Content Studio", icon: Sparkles, description: "Generate captions, reels & visuals" },
+  { id: "design", label: "Design Studio", icon: Palette, description: "Drag & drop post designer" },
   { id: "calendar", label: "Calendar & Approvals", icon: CalendarClock, description: "Schedule & approve content" },
   { id: "inbox", label: "Unified Inbox", icon: Inbox, description: "Comments, DMs & AI replies" },
   { id: "analytics", label: "Analytics & Leads", icon: BarChart3, description: "Performance & lead reports" },
+  { id: "plan", label: "Plan & Billing", icon: CreditCard, description: "Free or Pro, upgrade" },
 ];
 
+const adminItem = { id: "admin" as TabId, label: "Admin", icon: ShieldCheck, description: "Upgrade requests & plans" };
+
 export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }: SidebarProps) {
+  const { isAdmin } = usePlan();
+  const items = isAdmin ? [...navItems, adminItem] : navItems;
   return (
     <>
       {/* Mobile overlay */}
@@ -55,7 +65,7 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
 
           {/* Nav items */}
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
-            {navItems.map((item) => {
+            {items.map((item) => {
               const Icon = item.icon;
               const active = activeTab === item.id;
               return (

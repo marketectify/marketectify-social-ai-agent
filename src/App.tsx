@@ -5,6 +5,10 @@ import Sidebar from "./components/Sidebar";
 import TopNav from "./components/TopNav";
 import Overview from "./components/Overview";
 import Studio from "./components/Studio";
+import Designer from "./components/Designer";
+import HelpAssistant from "./components/HelpAssistant";
+import PlanPage from "./components/PlanPage";
+import AdminPage from "./components/AdminPage";
 import Calendar from "./components/Calendar";
 import Inbox from "./components/Inbox";
 import Analytics from "./components/Analytics";
@@ -12,6 +16,8 @@ import Login, { SetNewPassword } from "./components/Login";
 import { useTheme, type Theme } from "./theme";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { PostsProvider } from "./context/PostsContext";
+import { PlanProvider } from "./context/PlanContext";
+import { createLocalMediaStore, createSupabaseMediaStore, type MediaStore } from "./lib/mediaStore";
 import { MessagesProvider } from "./context/MessagesContext";
 import { SocialAccountsProvider, useSocialAccounts } from "./context/SocialAccountsContext";
 import { useToast } from "./context/ToastContext";
@@ -94,11 +100,17 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
           <div hidden={activeTab !== "studio"}>
             <Studio />
           </div>
+          <div hidden={activeTab !== "design"}>
+            <Designer />
+          </div>
           {activeTab === "calendar" && <Calendar />}
           {activeTab === "inbox" && <Inbox />}
           {activeTab === "analytics" && <Analytics />}
+          {activeTab === "plan" && <PlanPage />}
+          {activeTab === "admin" && <AdminPage />}
         </main>
       </div>
+      <HelpAssistant />
     </div>
   );
 }
@@ -118,6 +130,11 @@ function Gate({ theme, onToggleTheme }: ThemeProps) {
     }
     return supabase && workspace ? createSupabasePostsRepo(supabase, workspace.id) : null;
   }, [mode, workspace]);
+
+  const mediaStore = useMemo<MediaStore>(
+    () => (mode !== "demo" && supabase && workspace ? createSupabaseMediaStore(supabase, workspace.id) : createLocalMediaStore()),
+    [mode, workspace],
+  );
 
   const messagesRepo = useMemo<MessagesRepo | null>(() => {
     if (mode === "demo") {
@@ -166,11 +183,13 @@ function Gate({ theme, onToggleTheme }: ThemeProps) {
 
   return (
     // `key` makes sure nothing from a previous account leaks into the next one.
-    <PostsProvider key={user.id + (workspace?.id ?? "")} repo={repo}>
+    <PostsProvider key={user.id + (workspace?.id ?? "")} repo={repo} media={mediaStore}>
       <MessagesProvider repo={messagesRepo}>
-        <SocialAccountsProvider>
-          <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
-        </SocialAccountsProvider>
+        <PlanProvider>
+          <SocialAccountsProvider>
+            <Dashboard theme={theme} onToggleTheme={onToggleTheme} />
+          </SocialAccountsProvider>
+        </PlanProvider>
       </MessagesProvider>
     </PostsProvider>
   );

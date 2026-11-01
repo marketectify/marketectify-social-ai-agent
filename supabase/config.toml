@@ -17,3 +17,9 @@ verify_jwt = false
 # Google sends the browser here without a login header. The signed "state" value proves it is genuine.
 [functions.youtube-callback]
 verify_jwt = false
+
+[functions.help-assistant]
+verify_jwt = false
+
+[functions.generate-image]
+verify_jwt = false

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertCircle, Check, Clock, Loader2, Trash2, X } from "lucide-react";
-import type { Platform, Post, PostInput, PostStatus } from "../types";
+import { AlertCircle, Check, Clock, Copy, Download, ImagePlus, Loader2, Trash2, X } from "lucide-react";
+import type { Platform, Post, PostInput, PostMedia, PostStatus } from "../types";
 import { platformLabels } from "../data";
 import { platformIcons } from "./PlatformIcon";
 import { usePosts } from "../context/PostsContext";
@@ -22,12 +22,15 @@ interface PostEditorProps {
   /** Day pre-selected when creating a post from the calendar. */
   defaultDate?: Date;
   /** Values to pre-fill when creating a new post (for example from the AI Studio). */
-  initial?: Partial<Pick<PostInput, "title" | "caption" | "hashtags" | "platforms">>;
+  initial?: Partial<Pick<PostInput, "title" | "caption" | "hashtags" | "platforms">> & {
+    /** A finished picture (for example from the Design Studio) that is uploaded when the post is saved. */
+    mediaFile?: Blob;
+  };
   onClose: () => void;
 }
 
 export default function PostEditor({ post, defaultDate, initial, onClose }: PostEditorProps) {
-  const { createPost, updatePost, deletePost } = usePosts();
+  const { createPost, updatePost, deletePost, uploadMedia, discardMedia } = usePosts();
   const toast = useToast();
   const isNew = post === null;
   const status: PostStatus = post?.status ?? "draft";
@@ -40,6 +43,12 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
   const [schedule, setSchedule] = useState(
     post ? toLocalInputValue(post.scheduledAt) : defaultSchedule(defaultDate),
   );
+  // The picture of the post: one that is already stored, or a new file waiting to be uploaded on save.
+  const [media, setMedia] = useState<PostMedia | null>(post?.media ?? null);
+  const [pendingFile, setPendingFile] = useState<Blob | null>(initial?.mediaFile ?? null);
+  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const platformsRef = useRef<HTMLFieldSetElement>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -53,6 +62,26 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  useEffect(() => {
+    if (!pendingFile) {
+      setPendingUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(pendingFile);
+    setPendingUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingFile]);
+
+  const pickFile = (file: File | undefined) => {
+    if (!file) return;
+    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+      setError("Please choose a PNG, JPG or WebP picture.");
+      return;
+    }
+    setError(null);
+    setPendingFile(file);
+  };
 
   const togglePlatform = (p: Platform) =>
     setPlatforms((prev) => (prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]));
@@ -75,26 +104,48 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     const problem = validate(target);
     if (problem) {
       setError(problem);
+      if (/platform/i.test(problem)) platformsRef.current?.scrollIntoView?.({ block: "center", behavior: "smooth" });
       return;
     }
     setError(null);
     setBusy(kind);
-    const input: PostInput = {
-      title: title.trim(),
-      caption: caption.trim(),
-      hashtags: parseHashtags(hashtagText),
-      platforms,
-      status: target,
-      scheduledAt: fromLocalInputValue(schedule),
-    };
+    let uploaded: PostMedia | null = null;
     try {
-      if (post) await updatePost(post.id, input);
-      else await createPost(input);
+      if (pendingFile) uploaded = await uploadMedia(pendingFile, "image");
+      const input: PostInput = {
+        title: title.trim(),
+        caption: caption.trim(),
+        hashtags: parseHashtags(hashtagText),
+        platforms,
+        status: target,
+        scheduledAt: fromLocalInputValue(schedule),
+        media: uploaded ?? media,
+      };
+      try {
+        if (post) await updatePost(post.id, input);
+        else await createPost(input);
+      } catch (e) {
+        if (uploaded) void discardMedia(uploaded.url); // do not leave a file nobody uses
+        throw e;
+      }
+      // The old picture was replaced or removed: delete the file that is no longer used.
+      if (post?.media && post.media.url !== input.media?.url) void discardMedia(post.media.url);
       toast.success(successMessage);
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save. Please try again.");
       setBusy(null);
+    }
+  };
+
+  const copyForPosting = async () => {
+    const tags = parseHashtags(hashtagText).join(" ");
+    const text = [caption.trim(), tags].filter(Boolean).join("\n\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Caption and hashtags copied.");
+    } catch {
+      setError("Could not copy. Select the caption text and copy it by hand.");
     }
   };
 
@@ -219,7 +270,57 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
             </div>
           </div>
 
-          <fieldset disabled={locked}>
+          <div>
+            <p className="text-xs font-semibold text-slate-600 mb-1.5">Picture</p>
+            {(pendingUrl ?? media?.url) ? (
+              <div className="flex items-start gap-3">
+                <img
+                  src={pendingUrl ?? media?.url}
+                  alt="Picture of this post"
+                  className="w-28 h-28 object-cover rounded-xl border border-slate-200 bg-slate-100/50"
+                />
+                {!locked && (
+                  <div className="flex flex-col gap-2">
+                    <button type="button" onClick={() => fileInput.current?.click()} className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100/60">
+                      Change picture
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingFile(null);
+                        setMedia(null);
+                      }}
+                      className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-500/10"
+                    >
+                      Remove picture
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                disabled={locked}
+                onClick={() => fileInput.current?.click()}
+                className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-slate-300 text-sm text-slate-700 hover:bg-slate-100/50 disabled:opacity-60"
+              >
+                <ImagePlus className="w-4 h-4" aria-hidden="true" /> Add a picture
+              </button>
+            )}
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              aria-label="Choose a picture file"
+              onChange={(e) => {
+                pickFile(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </div>
+
+          <fieldset ref={platformsRef} disabled={locked}>
             <legend className="text-xs font-semibold text-slate-600 mb-1.5">Publish to</legend>
             <div className="grid grid-cols-2 gap-2">
               {ALL_PLATFORMS.map((p) => {
@@ -263,6 +364,10 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
             </p>
           </div>
 
+        </div>
+
+        {/* Actions. The error sits here (not at the end of the long form) so it is always in view. */}
+        <div className="p-5 border-t border-slate-200 space-y-3">
           {error && (
             <div
               role="alert"
@@ -272,10 +377,34 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
               <span>{error}</span>
             </div>
           )}
-        </div>
-
-        {/* Actions */}
-        <div className="p-5 border-t border-slate-200 space-y-3">
+          {status === "approved" && post && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-2" data-testid="publish-helper">
+              <p className="text-sm font-semibold text-slate-900">
+                {new Date(post.scheduledAt ?? 0).getTime() <= Date.now() ? "Time to post this" : "Ready to post by hand"}
+              </p>
+              <p className="text-xs text-slate-700">
+                Direct posting to the platforms is not connected yet. Copy the text, post it in the app, then mark it as published here.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={copyForPosting} className="h-9 px-3 rounded-lg text-sm font-medium border border-slate-200 bg-white/60 hover:bg-slate-100 inline-flex items-center gap-1.5">
+                  <Copy className="w-4 h-4" aria-hidden="true" /> Copy caption
+                </button>
+                {media?.url && (
+                  <a href={media.url} download target="_blank" rel="noreferrer" className="h-9 px-3 rounded-lg text-sm font-medium border border-slate-200 bg-white/60 hover:bg-slate-100 inline-flex items-center gap-1.5">
+                    <Download className="w-4 h-4" aria-hidden="true" /> Download picture
+                  </a>
+                )}
+                <button
+                  type="button"
+                  disabled={anyBusy}
+                  onClick={() => run("save", "published", "Marked as published.")}
+                  className="h-9 px-3 rounded-lg text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60 inline-flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" aria-hidden="true" /> Mark as published
+                </button>
+              </div>
+            </div>
+          )}
           {!locked && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(status === "draft" || status === "pending") && (

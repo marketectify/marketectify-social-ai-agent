@@ -129,6 +129,8 @@ Google AI Studio, delete the old one and update the secret.
 SQL Editor, New query, paste all of `supabase/migrations/0003_messages.sql`, Run. That is all.
 The Inbox uses the same Gemini key and daily limit as the Studio, so nothing else is needed.
 
+**Auto-draft replies:** switch it on at the top of the Inbox. The AI then writes a first reply (up to 5 at a time, 1 AI use each) for new messages, shown with a "Draft ready" badge. You still check and post the reply yourself. **Posting by hand:** open an approved post and use *Copy caption*, *Download picture* and *Mark as published*. Real automatic posting and replying on Facebook, Instagram and TikTok needs each platform's developer app and approval, and is a separate step.
+
 Until Facebook, Instagram, TikTok and YouTube are connected (they need app review by each platform),
 messages are added by hand with **Add message**. The AI drafts the reply, you copy it, post it on the
 platform and press **Mark as replied**.
@@ -142,7 +144,7 @@ time, leads, posts per month, CSV export). In the Inbox press **Mark as lead** o
 customers and the lead funnel fills in. Reach, likes and followers only exist inside Facebook, Instagram,
 TikTok and YouTube, so they will appear after those connections are built, not before.
 
-## 10. Connect YouTube
+## 11. Connect YouTube
 
 Connecting shows your channel name and real subscriber, view and video counts in the top bar and in
 Analytics. (Publishing videos comes later: it needs a video upload feature.)
@@ -175,6 +177,84 @@ The login tokens are stored in the database but can never be read from the brows
 | Google says "access blocked" | Add your Gmail under Test users on the OAuth consent screen |
 | "YouTube Data API v3 is not enabled" | Enable it in Google Cloud, Library |
 | "no YouTube channel" | Create a channel on youtube.com with that Google account |
+
+## Design Studio
+
+Open **Design Studio**, drag a heading, paragraph, box, circle or picture onto the canvas (or drop a picture file
+from your computer), pick a background (colour, blend or picture) and press **Download PNG** or **Use in post**.
+
+- **Many designs:** **Save** keeps the design; **New design** starts a fresh canvas; **Save as copy** makes a second
+  design from the one you have open. Every saved design appears under **My designs** and you can open any of them.
+  Picking a template while a saved design is open starts a new design, so the saved one is never overwritten.
+- **Use in post:** turns the design into a picture and opens the post form with it attached. Choose platforms and a
+  date, then **Send for approval** or **Approve & schedule** like any other post. The picture shows in the Calendar.
+- Designs you press **Save** on are kept in the browser on that computer. They are not in the database yet, so they
+  do not follow you to another computer. A design you send to a post is stored with the post and is safe.
+
+### Run `0008_post_media.sql` (needed for "Use in post" in real mode)
+
+Supabase -> SQL Editor -> paste `supabase/migrations/0008_post_media.sql` -> Run. It adds the picture columns to
+posts and creates the public storage bucket `post-media` (only the workspace owner can add or delete files in
+their own folder). In demo mode pictures are kept in the browser instead.
+
+### Plans: Free and Pro (upgrade system)
+
+Every account starts on the **Free** plan. **AI pictures** and **AI videos** are Pro features. Everyone sees the
+AI picture / AI video boxes in the Design Studio; on Free, pressing **Make picture** or **Make video** (or the
+**Upgrade** links in those boxes, the top bar **Upgrade** button, the dashboard **Plan** card or **Plan & Billing** in
+the sidebar) opens the upgrade window. The server also refuses the request (error 402), so the browser cannot bypass it.
+
+**How an upgrade happens**
+
+1. The customer sends an upgrade request (phone / WhatsApp / email + optional note) from the upgrade window or the
+   **Plan & Billing** page.
+2. You open **Admin** in the sidebar (only admins see it), contact the customer, agree the price and take the payment
+   yourself (bank transfer, JazzCash, Easypaisa ...). No payment gateway is connected yet.
+3. Press **Approve**. The account switches to Pro. The customer sees it when they reload or return to the tab.
+   In **Admin -> Accounts** you can also move any account to Pro or back to Free at any time.
+
+**One-time setup**
+
+1. Run `0007_media_quota.sql`, `0009_plans.sql` and `0010_upgrade_requests.sql` in the Supabase SQL Editor (in this
+   order; each needs 0001 first and is safe to run again).
+2. Make yourself an admin (this is the only way to become one; change the email):
+
+```sql
+insert into public.app_admins (user_id)
+select id from auth.users where email = 'you@example.com'
+on conflict do nothing;
+```
+
+3. Make your own account Pro too if you want to use AI pictures yourself: open **Admin -> Accounts** and pick **Pro**
+   next to your account.
+4. Optional, in GitHub -> Settings -> Secrets and variables -> Actions -> repository secrets:
+   `VITE_PRO_PRICE` (text shown on the Plan page, for example `PKR 4,999 / month`) and `VITE_UPGRADE_CONTACT`
+   (your email or an `https://` page, used when someone cannot send a request from the site).
+
+AI pictures cost money per picture: billing must be on for the Google project that owns `GEMINI_API_KEY`. Daily limit
+per user: secret `AI_IMAGE_DAILY_LIMIT` (default 10). Model list: optional secret `GEMINI_IMAGE_MODEL`. The function
+`generate-image` is deployed by the same GitHub Action. AI video is shown as "coming soon" for Pro accounts.
+
+## Help assistant
+
+The round **Help** button at the bottom right of every page opens a chat that answers questions about this app
+(how to use each tab, what secrets are needed, what to do on an error). It uses the same `GEMINI_API_KEY` as the AI
+Studio and the same daily limit, so there is nothing new to set up. It only works when signed in (not in demo mode).
+The function is `help-assistant`; it is deployed by the same GitHub Action as the other functions.
+Its knowledge lives in `supabase/functions/help-assistant/logic.ts` (`APP_GUIDE`): when you add a feature, add a line there.
+
+## Hostinger by FTP (if the GitHub connection breaks)
+
+Hostinger can lose its GitHub link (for example when a second GitHub account is connected to the same Hostinger
+account). The site can then be uploaded by FTP instead, straight from GitHub Actions:
+
+1. Hostinger -> Websites -> your site -> **Files -> FTP Accounts**. Note the **host**, **username**, and the **folder**
+   (usually `/domains/<your-domain>/public_html/`). Set or reset the FTP password there.
+2. GitHub -> repository -> Settings -> Secrets and variables -> Actions -> **Repository secrets**. Add
+   `FTP_SERVER` (the host), `FTP_USERNAME`, `FTP_PASSWORD` and `FTP_DIR` (the folder, ending with `/`).
+3. Merge any pull request (or run **Publish site to deploy branch** by hand). The action uploads the built site.
+
+If the FTP secrets are missing the step is skipped. Never share the FTP password in chat.
 
 ---
 
