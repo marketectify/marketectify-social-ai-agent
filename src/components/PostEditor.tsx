@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertCircle, Check, Clock, ImagePlus, Loader2, Trash2, X } from "lucide-react";
+import { AlertCircle, Check, Clock, Copy, Download, ImagePlus, Loader2, Trash2, X } from "lucide-react";
 import type { Platform, Post, PostInput, PostMedia, PostStatus } from "../types";
 import { platformLabels } from "../data";
 import { platformIcons } from "./PlatformIcon";
@@ -135,6 +135,17 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save. Please try again.");
       setBusy(null);
+    }
+  };
+
+  const copyForPosting = async () => {
+    const tags = parseHashtags(hashtagText).join(" ");
+    const text = [caption.trim(), tags].filter(Boolean).join("\n\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Caption and hashtags copied.");
+    } catch {
+      setError("Could not copy. Select the caption text and copy it by hand.");
     }
   };
 
@@ -364,6 +375,34 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
             >
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
               <span>{error}</span>
+            </div>
+          )}
+          {status === "approved" && post && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-2" data-testid="publish-helper">
+              <p className="text-sm font-semibold text-slate-900">
+                {new Date(post.scheduledAt ?? 0).getTime() <= Date.now() ? "Time to post this" : "Ready to post by hand"}
+              </p>
+              <p className="text-xs text-slate-700">
+                Direct posting to the platforms is not connected yet. Copy the text, post it in the app, then mark it as published here.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={copyForPosting} className="h-9 px-3 rounded-lg text-sm font-medium border border-slate-200 bg-white/60 hover:bg-slate-100 inline-flex items-center gap-1.5">
+                  <Copy className="w-4 h-4" aria-hidden="true" /> Copy caption
+                </button>
+                {media?.url && (
+                  <a href={media.url} download target="_blank" rel="noreferrer" className="h-9 px-3 rounded-lg text-sm font-medium border border-slate-200 bg-white/60 hover:bg-slate-100 inline-flex items-center gap-1.5">
+                    <Download className="w-4 h-4" aria-hidden="true" /> Download picture
+                  </a>
+                )}
+                <button
+                  type="button"
+                  disabled={anyBusy}
+                  onClick={() => run("save", "published", "Marked as published.")}
+                  className="h-9 px-3 rounded-lg text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60 inline-flex items-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" aria-hidden="true" /> Mark as published
+                </button>
+              </div>
             </div>
           )}
           {!locked && (
