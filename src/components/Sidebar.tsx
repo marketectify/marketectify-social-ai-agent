@@ -106,6 +106,13 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
             <div className="glass-light rounded-xl p-4 space-y-1">
               <p className="text-xs font-medium text-slate-700">AI powered by Google Gemini</p>
               <p className="text-[10px] text-slate-500">Your daily usage shows inside the Studio.</p>
+              <p className="text-[10px] text-slate-500 pt-1">
+                <a href="/privacy.html" target="_blank" rel="noreferrer" className="underline">Privacy</a>
+                {" · "}
+                <a href="/terms.html" target="_blank" rel="noreferrer" className="underline">Terms</a>
+                {" · "}
+                <a href="/data-deletion.html" target="_blank" rel="noreferrer" className="underline">Delete my data</a>
+              </p>
             </div>
           </div>
         </div>
