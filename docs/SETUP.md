@@ -161,12 +161,32 @@ Supabase -> SQL Editor -> paste `supabase/migrations/0008_post_media.sql` -> Run
 posts and creates the public storage bucket `post-media` (only the workspace owner can add or delete files in
 their own folder). In demo mode pictures are kept in the browser instead.
 
-### AI pictures (paid Gemini feature)
+### AI pictures and AI video are Pro features (plans)
 
-The **AI picture** box in the Design Studio makes a picture from a description. Run `0007_media_quota.sql` once
-(its own small daily limit, default 10 pictures per user per day, secret `AI_IMAGE_DAILY_LIMIT`). Picture models are
-paid: billing must be on for the Google project that owns `GEMINI_API_KEY`. The model list can be changed with the
-optional secret `GEMINI_IMAGE_MODEL`. The function `generate-image` is deployed by the same GitHub Action.
+Every account starts on the **Free** plan. The **AI picture** and **AI video** boxes in the Design Studio (and the
+**Upgrade** button in the top bar) are visible to everyone; on the Free plan, pressing **Make picture** or
+**Make video** opens an "Upgrade your account" window that compares Free and Pro. The server also refuses the
+request (error 402), so it cannot be bypassed from the browser.
+
+1. Run `0007_media_quota.sql` and `0009_plans.sql` once in the Supabase SQL Editor (0009 needs 0001 first).
+2. Move an account to Pro (nobody can do this from the website, only you in the SQL Editor):
+
+```sql
+insert into public.workspace_plans (workspace_id, plan)
+select w.id, 'pro' from public.workspaces w
+join auth.users u on u.id = w.owner_id
+where u.email = 'client@example.com'
+on conflict (workspace_id) do update set plan = 'pro', updated_at = now();
+```
+
+   Use `'free'` instead of `'pro'` to move them back. The change shows after the person reloads (or returns to the tab).
+3. Optional: where the **Email us to upgrade** button goes. In GitHub -> Settings -> Secrets and variables -> Actions
+   add a repository secret `VITE_UPGRADE_CONTACT` with your email address (or an `https://` payment/contact page).
+   Without it, the window says "please contact the Marketectify team".
+
+AI pictures cost money per picture: billing must be on for the Google project that owns `GEMINI_API_KEY`. Daily limit
+per user: secret `AI_IMAGE_DAILY_LIMIT` (default 10). Model list: optional secret `GEMINI_IMAGE_MODEL`. The function
+`generate-image` is deployed by the same GitHub Action. AI video is shown as "coming soon" for Pro accounts.
 
 ## Help assistant
 

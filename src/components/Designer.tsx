@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import AiPicturePanel from "./AiPicturePanel";
 import PostEditor from "./PostEditor";
+import AiVideoPanel from "./AiVideoPanel";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BringToFront, Circle, Copy, Download, FolderOpen, Heading, ImagePlus, Palette,
   FilePlus2, Redo2, Save, Send, SendToBack, Square, Trash2, Type, Undo2,
@@ -470,6 +471,7 @@ export default function Designer() {
             height={design.height}
             onPicture={(file, as) => (as === "item" ? addImageFile(file) : setBackgroundImage(file))}
           />
+          <AiVideoPanel />
         </div>
 
         {/* Centre: canvas */}

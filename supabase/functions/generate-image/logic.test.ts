@@ -15,6 +15,7 @@ function makeDeps(over: Partial<ImageDeps> = {}) {
     dailyLimit: 3,
     geminiConfigured: true,
     getUser: async (a) => (a === "Bearer good" ? { id: "u1" } : null),
+    getPlan: async () => "pro",
     consumeQuota: async () => ({ allowed: true, used: ++calls.consumed }),
     releaseQuota: async () => void calls.released++,
     callGemini: async (model, body) => (calls.gemini.push({ model, body: body as any }), okImage()),
@@ -107,6 +108,20 @@ describe("handleImage", () => {
     expect((await handleImage(post({ prompt: "" }), deps)).status).toBe(400);
     expect((await handleImage(post("x".repeat(IMAGE_LIMITS.bodyBytes + 1)), deps)).status).toBe(413);
     expect(calls.consumed).toBe(0);
+  });
+  it("asks free accounts to upgrade, before any quota or Gemini use", async () => {
+    const { deps, calls } = makeDeps({ getPlan: async () => "free" });
+    const res = await handleImage(post(valid), deps);
+    expect(res.status).toBe(402);
+    expect((await res.json()).error.code).toBe("upgrade_required");
+    expect(calls.consumed + calls.gemini.length + calls.released).toBe(0);
+  });
+  it("reports when the plan cannot be checked (0009 not run) and spends nothing", async () => {
+    const { deps, calls } = makeDeps({ getPlan: async () => { throw new Error("function my_plan does not exist"); } });
+    const res = await handleImage(post(valid), deps);
+    expect(res.status).toBe(500);
+    expect((await res.json()).error.code).toBe("plan_unavailable");
+    expect(calls.consumed + calls.gemini.length).toBe(0);
   });
   it("stops at the daily limit", async () => {
     const { deps, calls } = makeDeps({ consumeQuota: async () => ({ allowed: false, used: 3 }) });

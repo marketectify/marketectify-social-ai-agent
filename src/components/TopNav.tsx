@@ -6,6 +6,7 @@ import ThemeToggle from "./ThemeToggle";
 import { platformIcons } from "./PlatformIcon";
 import { platformLabels } from "../data";
 import { useAuth } from "../context/AuthContext";
+import { usePlan } from "../context/PlanContext";
 
 interface TopNavProps {
   onMenuClick: () => void;
@@ -23,6 +24,7 @@ function initials(name: string): string {
 
 export default function TopNav({ onMenuClick, theme, onToggleTheme }: TopNavProps) {
   const { mode, user, workspace, signOut } = useAuth();
+  const { isPro, showUpgrade } = usePlan();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const isDemo = mode === "demo";
@@ -69,9 +71,12 @@ export default function TopNav({ onMenuClick, theme, onToggleTheme }: TopNavProp
 
         <div className="flex items-center gap-2 lg:gap-3 ml-auto">
           {/* Upgrade button */}
-          <button className="hidden sm:flex items-center gap-2 px-4 h-10 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-all glow-blue hover:scale-[1.02] active:scale-95">
+          <button
+            onClick={() => showUpgrade()}
+            className="hidden sm:flex items-center gap-2 px-4 h-10 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-all glow-blue hover:scale-[1.02] active:scale-95"
+          >
             <Plus className="w-4 h-4" />
-            Upgrade System
+            {isPro ? "Pro plan" : "Upgrade"}
           </button>
 
           {/* Dark / light theme switch */}

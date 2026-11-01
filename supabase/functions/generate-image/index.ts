@@ -40,6 +40,12 @@ const deps: ImageDeps = {
     return error || !data.user ? null : { id: data.user.id };
   },
 
+  async getPlan(authorization) {
+    const { data, error } = await userClient(authorization).rpc("my_plan");
+    if (error) throw new Error(error.message);
+    return data === "pro" ? "pro" : "free";
+  },
+
   async consumeQuota(authorization, limit) {
     const { data, error } = await userClient(authorization).rpc("consume_media_quota", { p_kind: "image", p_limit: limit });
     if (error) throw new Error(error.message);
