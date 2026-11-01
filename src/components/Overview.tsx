@@ -1,23 +1,28 @@
 import { useMemo, useState } from "react";
 import {
-  CalendarClock,
-  CalendarPlus,
+  AlertTriangle,
+  ArrowRight,
+  Check,
   CheckCircle2,
   Clock,
-  FileText,
+  FileEdit,
   Inbox as InboxIcon,
+  Lock,
+  MessageCircle,
+  Palette,
   Plus,
   Sparkles,
-  ArrowUpRight,
   type LucideIcon,
 } from "lucide-react";
-import type { Platform, Post, TabId } from "../types";
-import { platformLabels, platformBg } from "../data";
-import { platformIcons } from "./PlatformIcon";
+import type { Post, TabId } from "../types";
 import { usePosts } from "../context/PostsContext";
+import { useMessages } from "../context/MessagesContext";
 import { useAuth } from "../context/AuthContext";
+import { usePlan } from "../context/PlanContext";
 import { statusConfig } from "../lib/status";
-import { formatDateTime, formatFullDate } from "../lib/dates";
+import { formatFullDate, formatTime, formatWeekday } from "../lib/dates";
+import { buildAttention, greeting, headline, setupSteps, weekStrip, type AttentionKind } from "../lib/dashboard";
+import { loadDesigns } from "../lib/designStore";
 import PostEditor from "./PostEditor";
 
 interface OverviewProps {
@@ -26,68 +31,72 @@ interface OverviewProps {
 
 interface EditorState {
   post: Post | null;
+  defaultDate?: Date;
 }
 
-const ALL_PLATFORMS = Object.keys(platformLabels) as Platform[];
+const KIND_STYLE: Record<AttentionKind, { icon: LucideIcon; bar: string; icon_: string }> = {
+  overdue: { icon: AlertTriangle, bar: "bg-red-500", icon_: "text-red-600 dark:text-red-400" },
+  approve: { icon: Clock, bar: "bg-amber-500", icon_: "text-amber-700 dark:text-amber-400" },
+  unread: { icon: MessageCircle, bar: "bg-blue-500", icon_: "text-blue-600 dark:text-blue-400" },
+  unscheduled: { icon: FileEdit, bar: "bg-slate-400", icon_: "text-slate-600" },
+};
+
+function countDesigns(workspaceId: string): number {
+  try {
+    return loadDesigns(window.localStorage, workspaceId).length;
+  } catch {
+    return 0;
+  }
+}
 
 export default function Overview({ onNavigate }: OverviewProps) {
   const { posts, loading, error, reload } = usePosts();
+  const { messages } = useMessages();
   const { workspace } = useAuth();
+  const { isPro, showUpgrade } = usePlan();
   const [editor, setEditor] = useState<EditorState | null>(null);
 
-  const stats = useMemo(() => {
-    const now = Date.now();
-    const scheduled = posts.filter(
-      (p) => p.status === "approved" && p.scheduledAt && new Date(p.scheduledAt).getTime() >= now,
-    ).length;
-    return {
-      scheduled,
-      pending: posts.filter((p) => p.status === "pending").length,
+  const now = useMemo(() => new Date(), [posts, messages]);
+  const attention = useMemo(() => buildAttention(posts, messages, now), [posts, messages, now]);
+  const week = useMemo(() => weekStrip(posts, now), [posts, now]);
+  const weekCount = week.reduce((n, d) => n + d.posts.length, 0);
+  const steps = useMemo(() => setupSteps(posts, countDesigns(workspace?.id ?? "demo")), [posts, workspace?.id]);
+  const setupDone = steps.every((s) => s.done);
+
+  const counts = useMemo(
+    () => ({
+      scheduled: posts.filter((p) => p.status === "approved" && p.scheduledAt && new Date(p.scheduledAt).getTime() >= now.getTime()).length,
       drafts: posts.filter((p) => p.status === "draft").length,
       published: posts.filter((p) => p.status === "published").length,
-    };
-  }, [posts]);
+    }),
+    [posts, now],
+  );
 
-  const upcoming = useMemo(() => {
-    const now = Date.now();
-    return posts
-      .filter(
-        (p) =>
-          (p.status === "approved" || p.status === "pending") &&
-          p.scheduledAt &&
-          new Date(p.scheduledAt).getTime() >= now,
-      )
-      .slice(0, 5);
-  }, [posts]);
-
-  const platformCounts = useMemo(() => {
-    const counts = Object.fromEntries(ALL_PLATFORMS.map((p) => [p, 0])) as Record<Platform, number>;
-    for (const post of posts) for (const p of post.platforms) counts[p]++;
-    return counts;
-  }, [posts]);
-  const maxCount = Math.max(1, ...Object.values(platformCounts));
-  const hasPlatformData = Object.values(platformCounts).some((n) => n > 0);
-
-  const statCards: { label: string; value: number; icon: LucideIcon; accent: string }[] = [
-    { label: "Scheduled posts", value: stats.scheduled, icon: CalendarClock, accent: "bg-blue-500/10 border-blue-500/20" },
-    { label: "Awaiting approval", value: stats.pending, icon: Clock, accent: "bg-sky-500/10 border-sky-500/20" },
-    { label: "Drafts", value: stats.drafts, icon: FileText, accent: "bg-indigo-500/10 border-indigo-500/20" },
-    { label: "Published", value: stats.published, icon: CheckCircle2, accent: "bg-cyan-500/10 border-cyan-500/20" },
-  ];
+  const openPost = (id: string) => {
+    const post = posts.find((p) => p.id === id);
+    if (post) setEditor({ post });
+  };
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Welcome back, {workspace?.name ?? "there"} 👋</h2>
-          <p className="text-sm text-slate-600 mt-1">Here's what's happening across your social channels today.</p>
+    <div className="space-y-8 animate-fade-in">
+      {/* Header: one sentence that says what the day looks like */}
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm text-slate-600">{formatFullDate(now)}</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight mt-1 break-words">
+            {greeting(now.getHours())}, {workspace?.name ?? "there"}
+          </h2>
+          <p className="text-base text-slate-700 mt-1" aria-live="polite">
+            {loading ? "Checking your posts and messages…" : headline(attention, weekCount)}
+          </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-600">
-          <Clock className="w-4 h-4" />
-          <span>{formatFullDate(new Date())}</span>
-        </div>
-      </div>
+        <button
+          onClick={() => setEditor({ post: null })}
+          className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors shrink-0"
+        >
+          <Plus className="w-4 h-4" aria-hidden="true" /> New post
+        </button>
+      </header>
 
       {error && (
         <div role="alert" className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm border bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400">
@@ -98,203 +107,196 @@ export default function Overview({ onNavigate }: OverviewProps) {
         </div>
       )}
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {statCards.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <button
-              key={stat.label}
-              onClick={() => onNavigate("calendar")}
-              className="glass rounded-2xl p-5 text-left hover:border-slate-300 transition-all duration-300 hover:scale-[1.02]"
-            >
-              <div className={`w-11 h-11 rounded-xl flex items-center justify-center border mb-4 ${stat.accent}`}>
-                <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <p className="text-3xl font-bold text-slate-900 tracking-tight">
-                {loading ? <span className="inline-block w-10 h-8 rounded bg-slate-200 animate-pulse" /> : stat.value}
-              </p>
-              <p className="text-sm text-slate-600 mt-1">{stat.label}</p>
-            </button>
-          );
-        })}
-      </div>
+      {/* The next 7 days: the one thing on this page that is only possible with your data */}
+      <section aria-labelledby="week-title">
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 id="week-title" className="text-lg font-bold text-slate-900">Next 7 days</h3>
+          <button onClick={() => onNavigate("calendar")} className="text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline inline-flex items-center gap-1">
+            Open calendar <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+          </button>
+        </div>
+        <div className="glass rounded-2xl overflow-x-auto">
+          <ol className="grid grid-flow-col auto-cols-[minmax(9.5rem,1fr)] md:grid-flow-row md:grid-cols-7 divide-x divide-slate-200/80 min-w-0">
+            {week.map((day) => (
+              <li key={day.date.toISOString()} className="flex flex-col min-h-[9.5rem]">
+                <div className={`px-3 py-2 border-b border-slate-200/80 ${day.isToday ? "bg-blue-600 text-white" : ""}`}>
+                  <p className={`text-xs font-medium ${day.isToday ? "text-white/90" : "text-slate-600"}`}>{day.isToday ? "Today" : formatWeekday(day.date)}</p>
+                  <p className={`text-lg font-bold leading-tight ${day.isToday ? "text-white" : "text-slate-900"}`}>{day.date.getDate()}</p>
+                </div>
+                <div className="p-2 space-y-1.5 flex-1">
+                  {loading ? (
+                    <div className="h-8 rounded-lg bg-slate-100 animate-pulse" aria-hidden="true" />
+                  ) : day.posts.length === 0 ? (
+                    <button
+                      onClick={() => setEditor({ post: null, defaultDate: day.date })}
+                      aria-label={`Add a post on ${formatFullDate(day.date)}`}
+                      className="w-full h-full min-h-[3.5rem] rounded-lg border border-dashed border-slate-300 text-slate-500 hover:text-blue-700 hover:border-blue-500/50 hover:bg-blue-500/5 inline-flex items-center justify-center transition-colors"
+                    >
+                      <Plus className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <>
+                      {day.posts.slice(0, 3).map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => setEditor({ post: p })}
+                          title={`${p.title} · ${statusConfig[p.status].label}`}
+                          className={`w-full text-left rounded-lg px-2 py-1.5 text-white hover:brightness-110 transition ${statusConfig[p.status].chip}`}
+                        >
+                          <span className="block text-[11px] font-semibold truncate">{p.title}</span>
+                          <span className="block text-[10px] text-white/90">{p.scheduledAt ? formatTime(new Date(p.scheduledAt)) : ""}</span>
+                        </button>
+                      ))}
+                      {day.posts.length > 3 && <p className="text-[11px] text-slate-600 px-1">+{day.posts.length - 3} more</p>}
+                    </>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
 
-      {/* Main grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Upcoming posts */}
-        <div className="lg:col-span-2 glass rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Upcoming Scheduled Posts</h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {upcoming.length === 0 ? "Nothing queued" : `Next ${upcoming.length} on your calendar`}
-              </p>
-            </div>
-            <button
-              onClick={() => onNavigate("calendar")}
-              className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-            >
-              View Calendar <ArrowUpRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Needs you */}
+        <section className="lg:col-span-2" aria-labelledby="needs-title">
+          <h3 id="needs-title" className="text-lg font-bold text-slate-900 mb-3">Needs you</h3>
           {loading ? (
-            <div className="space-y-3" aria-hidden="true">
+            <div className="space-y-2" aria-hidden="true">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />
               ))}
             </div>
-          ) : upcoming.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center">
-              <p className="text-sm font-semibold text-slate-900">No upcoming posts</p>
-              <p className="text-xs text-slate-600 mt-1 mb-4">Schedule your next post to keep your channels active.</p>
-              <button
-                onClick={() => setEditor({ post: null })}
-                className="inline-flex items-center gap-2 px-4 h-10 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" /> Create a post
-              </button>
+          ) : attention.length === 0 ? (
+            <div className="glass rounded-2xl p-6 flex items-start gap-3">
+              <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <p className="font-semibold text-slate-900">Nothing is waiting for you.</p>
+                <p className="text-sm text-slate-600 mt-1">A good time to plan ahead: write a few captions with AI and schedule them for next week.</p>
+                <button onClick={() => onNavigate("studio")} className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 dark:text-blue-300 hover:underline">
+                  <Sparkles className="w-4 h-4" aria-hidden="true" /> Write captions with AI
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="space-y-3">
-              {upcoming.map((post) => (
-                <PostRow key={post.id} post={post} onClick={() => setEditor({ post })} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-6">
-          <div className="glass rounded-2xl p-5">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Quick Actions</h3>
-            <p className="text-xs text-slate-500 mb-5">Jump straight into work</p>
-            <div className="space-y-3">
-              <QuickAction
-                icon={Sparkles}
-                label="Create with AI"
-                description="Captions, scripts and visuals"
-                color="bg-blue-600"
-                onClick={() => onNavigate("studio")}
-              />
-              <QuickAction
-                icon={CalendarPlus}
-                label="Schedule Post"
-                description="Plan & queue content for publishing"
-                color="bg-sky-700"
-                onClick={() => setEditor({ post: null })}
-              />
-              <QuickAction
-                icon={InboxIcon}
-                label="View Inbox"
-                description="Check & reply to messages"
-                color="bg-indigo-600"
-                onClick={() => onNavigate("inbox")}
-              />
-            </div>
-          </div>
-
-          <div className="glass rounded-2xl p-5">
-            <h3 className="text-sm font-bold text-slate-900 mb-1">Posts by platform</h3>
-            <p className="text-xs text-slate-500 mb-4">Across all your posts</p>
-            {hasPlatformData ? (
-              <div className="space-y-3">
-                {ALL_PLATFORMS.map((p) => {
-                  const Icon = platformIcons[p];
-                  return (
-                    <div key={p} className="flex items-center gap-3">
-                      <Icon className="w-4 h-4 text-slate-600 shrink-0" />
-                      <span className="text-xs font-medium text-slate-700 w-16 shrink-0">{platformLabels[p]}</span>
-                      <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-blue-500"
-                          style={{ width: `${(platformCounts[p] / maxCount) * 100}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-semibold text-slate-900 w-6 text-right">{platformCounts[p]}</span>
+            <ul className="glass rounded-2xl divide-y divide-slate-200/80 overflow-hidden">
+              {attention.map((item) => {
+                const style = KIND_STYLE[item.kind];
+                const Icon = style.icon;
+                return (
+                  <li key={item.id} className="flex items-center gap-3 pr-3 sm:pr-4 relative">
+                    <span className={`self-stretch w-1 shrink-0 ${style.bar}`} aria-hidden="true" />
+                    <Icon className={`w-5 h-5 shrink-0 ${style.icon_}`} aria-hidden="true" />
+                    <div className="flex-1 min-w-0 py-3">
+                      <p className="text-sm font-semibold text-slate-900">{item.title}</p>
+                      <p className="text-xs text-slate-600 truncate">{item.detail}</p>
                     </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-xs text-slate-600">Choose platforms on your posts to see how they are spread out.</p>
-            )}
+                    <button
+                      onClick={() => (item.postId ? openPost(item.postId) : item.tab && onNavigate(item.tab))}
+                      className="shrink-0 h-9 px-3 rounded-lg border border-slate-200 text-xs font-semibold text-slate-800 hover:bg-slate-100/70 transition-colors"
+                    >
+                      {item.action}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {/* Quick starts */}
+          <h3 className="text-lg font-bold text-slate-900 mt-8 mb-3">Start something</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Start icon={Sparkles} label="Write with AI" hint="Captions, scripts, ideas" onClick={() => onNavigate("studio")} />
+            <Start icon={Palette} label="Design a picture" hint="Drag and drop designer" onClick={() => onNavigate("design")} />
+            <Start icon={InboxIcon} label="Answer messages" hint="AI writes the first draft" onClick={() => onNavigate("inbox")} />
           </div>
-        </div>
+
+          <p className="text-sm text-slate-600 mt-6">
+            <span className="font-semibold text-slate-900">{counts.scheduled}</span> scheduled ·{" "}
+            <span className="font-semibold text-slate-900">{counts.drafts}</span> drafts ·{" "}
+            <span className="font-semibold text-slate-900">{counts.published}</span> published
+          </p>
+        </section>
+
+        {/* Right column: plan and first steps */}
+        <aside className="space-y-6" aria-label="Your plan and first steps">
+          <section className="glass rounded-2xl p-5" aria-labelledby="plan-title">
+            <h3 id="plan-title" className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              {isPro ? "Pro plan" : "Free plan"}
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${isPro ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-700"}`}>
+                {isPro ? "ACTIVE" : "CURRENT"}
+              </span>
+            </h3>
+            {isPro ? (
+              <p className="text-sm text-slate-600 mt-2">AI pictures are unlocked. AI videos will join your plan when they are ready.</p>
+            ) : (
+              <>
+                <ul className="mt-3 space-y-1.5 text-sm text-slate-700">
+                  <li className="flex items-center gap-2"><Check className="w-4 h-4 text-emerald-600" aria-hidden="true" /> AI captions, scripts and reply drafts</li>
+                  <li className="flex items-center gap-2"><Lock className="w-4 h-4 text-slate-500" aria-hidden="true" /> AI pictures</li>
+                  <li className="flex items-center gap-2"><Lock className="w-4 h-4 text-slate-500" aria-hidden="true" /> AI videos</li>
+                </ul>
+                <button
+                  onClick={() => showUpgrade()}
+                  className="mt-4 w-full h-10 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+                >
+                  See Pro plan
+                </button>
+              </>
+            )}
+          </section>
+
+          {!setupDone && !loading && (
+            <section className="glass rounded-2xl p-5" aria-labelledby="setup-title">
+              <h3 id="setup-title" className="text-sm font-bold text-slate-900">First steps</h3>
+              <p className="text-xs text-slate-600 mt-1">{steps.filter((s) => s.done).length} of {steps.length} done</p>
+              <ol className="mt-3 space-y-3">
+                {steps.map((s) => (
+                  <li key={s.id} className="flex items-start gap-2.5">
+                    <span
+                      className={`mt-0.5 w-5 h-5 rounded-full border flex items-center justify-center shrink-0 ${s.done ? "bg-emerald-600 border-emerald-600" : "border-slate-300"}`}
+                      aria-label={s.done ? "Done" : "Not done yet"}
+                    >
+                      {s.done && <Check className="w-3 h-3 text-white" aria-hidden="true" />}
+                    </span>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-medium ${s.done ? "text-slate-500 line-through" : "text-slate-900"}`}>{s.label}</p>
+                      {!s.done && (
+                        <>
+                          <p className="text-xs text-slate-600">{s.hint}</p>
+                          <button
+                            onClick={() => (s.newPost ? setEditor({ post: null }) : s.tab && onNavigate(s.tab))}
+                            className="mt-1 text-xs font-semibold text-blue-700 dark:text-blue-300 hover:underline"
+                          >
+                            {s.action}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+        </aside>
       </div>
 
-      {editor && <PostEditor key={editor.post?.id ?? "new"} post={editor.post} onClose={() => setEditor(null)} />}
+      {editor && <PostEditor key={editor.post?.id ?? "new"} post={editor.post} defaultDate={editor.defaultDate} onClose={() => setEditor(null)} />}
     </div>
   );
 }
 
-function PostRow({ post, onClick }: { post: Post; onClick: () => void }) {
-  const status = statusConfig[post.status];
+function Start({ icon: Icon, label, hint, onClick }: { icon: LucideIcon; label: string; hint: string; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="w-full group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-100/50 transition-all text-left border border-transparent hover:border-slate-200"
+      className="glass-light rounded-xl p-4 text-left flex items-start gap-3 hover:border-blue-500/40 transition-colors"
     >
-      <div className={`w-12 h-12 rounded-xl ${status.chip} shrink-0 flex items-center justify-center`}>
-        <CalendarClock className="w-5 h-5 text-white/90" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold text-slate-900 truncate group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
-            {post.title}
-          </p>
-          <span className={`shrink-0 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${status.badge}`}>
-            {status.label}
-          </span>
-        </div>
-        {post.caption && <p className="text-xs text-slate-500 truncate mt-0.5">{post.caption}</p>}
-        <div className="flex items-center gap-3 mt-1.5">
-          {post.scheduledAt && (
-            <span className="text-[11px] text-slate-500 flex items-center gap-1">
-              <Clock className="w-3 h-3" /> {formatDateTime(post.scheduledAt)}
-            </span>
-          )}
-          <div className="flex items-center gap-1">
-            {post.platforms.map((p) => (
-              <span key={p} className={`px-1.5 py-0.5 rounded text-[9px] font-medium border ${platformBg[p]}`}>
-                {platformLabels[p].slice(0, 2)}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-      <ArrowUpRight className="w-4 h-4 text-slate-600 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0" />
-    </button>
-  );
-}
-
-function QuickAction({
-  icon: Icon,
-  label,
-  description,
-  color,
-  onClick,
-}: {
-  icon: LucideIcon;
-  label: string;
-  description: string;
-  color: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="w-full group flex items-center gap-3 p-3 rounded-xl glass-light hover:border-slate-300 transition-all hover:scale-[1.02] active:scale-95 text-left"
-    >
-      <div className={`w-10 h-10 rounded-xl ${color} flex items-center justify-center shrink-0`}>
-        <Icon className="w-5 h-5 text-white" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">{label}</p>
-        <p className="text-[11px] text-slate-500">{description}</p>
-      </div>
-      <ArrowUpRight className="w-4 h-4 text-slate-600 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0" />
+      <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" aria-hidden="true" />
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-slate-900">{label}</span>
+        <span className="block text-xs text-slate-600">{hint}</span>
+      </span>
     </button>
   );
 }

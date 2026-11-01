@@ -7,6 +7,8 @@ import Overview from "./components/Overview";
 import Studio from "./components/Studio";
 import Designer from "./components/Designer";
 import HelpAssistant from "./components/HelpAssistant";
+import PlanPage from "./components/PlanPage";
+import AdminPage from "./components/AdminPage";
 import Calendar from "./components/Calendar";
 import Inbox from "./components/Inbox";
 import Analytics from "./components/Analytics";
@@ -77,6 +79,8 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
           {activeTab === "calendar" && <Calendar />}
           {activeTab === "inbox" && <Inbox />}
           {activeTab === "analytics" && <Analytics />}
+          {activeTab === "plan" && <PlanPage />}
+          {activeTab === "admin" && <AdminPage />}
         </main>
       </div>
       <HelpAssistant />

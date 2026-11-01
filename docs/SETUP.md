@@ -163,28 +163,39 @@ Supabase -> SQL Editor -> paste `supabase/migrations/0008_post_media.sql` -> Run
 posts and creates the public storage bucket `post-media` (only the workspace owner can add or delete files in
 their own folder). In demo mode pictures are kept in the browser instead.
 
-### AI pictures and AI video are Pro features (plans)
+### Plans: Free and Pro (upgrade system)
 
-Every account starts on the **Free** plan. The **AI picture** and **AI video** boxes in the Design Studio (and the
-**Upgrade** button in the top bar) are visible to everyone; on the Free plan, pressing **Make picture** or
-**Make video** opens an "Upgrade your account" window that compares Free and Pro. The server also refuses the
-request (error 402), so it cannot be bypassed from the browser.
+Every account starts on the **Free** plan. **AI pictures** and **AI videos** are Pro features. Everyone sees the
+AI picture / AI video boxes in the Design Studio; on Free, pressing **Make picture** or **Make video** (or the
+**Upgrade** links in those boxes, the top bar **Upgrade** button, the dashboard **Plan** card or **Plan & Billing** in
+the sidebar) opens the upgrade window. The server also refuses the request (error 402), so the browser cannot bypass it.
 
-1. Run `0007_media_quota.sql` and `0009_plans.sql` once in the Supabase SQL Editor (0009 needs 0001 first).
-2. Move an account to Pro (nobody can do this from the website, only you in the SQL Editor):
+**How an upgrade happens**
+
+1. The customer sends an upgrade request (phone / WhatsApp / email + optional note) from the upgrade window or the
+   **Plan & Billing** page.
+2. You open **Admin** in the sidebar (only admins see it), contact the customer, agree the price and take the payment
+   yourself (bank transfer, JazzCash, Easypaisa ...). No payment gateway is connected yet.
+3. Press **Approve**. The account switches to Pro. The customer sees it when they reload or return to the tab.
+   In **Admin -> Accounts** you can also move any account to Pro or back to Free at any time.
+
+**One-time setup**
+
+1. Run `0007_media_quota.sql`, `0009_plans.sql` and `0010_upgrade_requests.sql` in the Supabase SQL Editor (in this
+   order; each needs 0001 first and is safe to run again).
+2. Make yourself an admin (this is the only way to become one; change the email):
 
 ```sql
-insert into public.workspace_plans (workspace_id, plan)
-select w.id, 'pro' from public.workspaces w
-join auth.users u on u.id = w.owner_id
-where u.email = 'client@example.com'
-on conflict (workspace_id) do update set plan = 'pro', updated_at = now();
+insert into public.app_admins (user_id)
+select id from auth.users where email = 'you@example.com'
+on conflict do nothing;
 ```
 
-   Use `'free'` instead of `'pro'` to move them back. The change shows after the person reloads (or returns to the tab).
-3. Optional: where the **Email us to upgrade** button goes. In GitHub -> Settings -> Secrets and variables -> Actions
-   add a repository secret `VITE_UPGRADE_CONTACT` with your email address (or an `https://` payment/contact page).
-   Without it, the window says "please contact the Marketectify team".
+3. Make your own account Pro too if you want to use AI pictures yourself: open **Admin -> Accounts** and pick **Pro**
+   next to your account.
+4. Optional, in GitHub -> Settings -> Secrets and variables -> Actions -> repository secrets:
+   `VITE_PRO_PRICE` (text shown on the Plan page, for example `PKR 4,999 / month`) and `VITE_UPGRADE_CONTACT`
+   (your email or an `https://` page, used when someone cannot send a request from the site).
 
 AI pictures cost money per picture: billing must be on for the Google project that owns `GEMINI_API_KEY`. Daily limit
 per user: secret `AI_IMAGE_DAILY_LIMIT` (default 10). Model list: optional secret `GEMINI_IMAGE_MODEL`. The function

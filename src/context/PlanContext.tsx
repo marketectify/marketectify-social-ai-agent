@@ -3,11 +3,20 @@ import { createPortal } from "react-dom";
 import { Check, Minus, Sparkles, X } from "lucide-react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "../lib/supabase";
-import { PLAN_FEATURES, PRO_FEATURE_LABELS, fetchPlan, upgradeLink, type Plan, type ProFeature } from "../lib/plan";
+import { PLAN_FEATURES, PRO_FEATURE_LABELS, fetchPlan, type Plan, type ProFeature } from "../lib/plan";
+import { fetchIsAdmin, fetchMyRequest, sendUpgradeRequest, type UpgradeRequest } from "../lib/upgrade";
+import UpgradeForm from "../components/UpgradeForm";
 
 interface PlanContextValue {
   plan: Plan;
   isPro: boolean;
+  /** True for the site owner(s) who may approve upgrade requests (set in SQL, see docs/SETUP.md). */
+  isAdmin: boolean;
+  /** The latest upgrade request of this account, if any. */
+  request: UpgradeRequest | null;
+  /** False in demo mode: there is no database to send a request to. */
+  canRequest: boolean;
+  submitRequest: (contact: string, note: string) => Promise<void>;
   /** Re-reads the plan (for example after you were upgraded). */
   refresh: () => Promise<void>;
   /** Opens the upgrade window. `feature` says what the person tried to use. */
@@ -21,16 +30,32 @@ const PlanContext = createContext<PlanContextValue | null>(null);
 export function PlanProvider({ children }: { children: ReactNode }) {
   const { mode, user } = useAuth();
   const [plan, setPlan] = useState<Plan>("free");
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [request, setRequest] = useState<UpgradeRequest | null>(null);
   const [dialog, setDialog] = useState<{ feature?: ProFeature } | null>(null);
   const userId = user?.id ?? null;
 
   const refresh = useCallback(async () => {
     if (mode === "demo" || !supabase || !userId) {
       setPlan("free");
+      setIsAdmin(false);
+      setRequest(null);
       return;
     }
-    setPlan(await fetchPlan(supabase));
+    const [p, admin, req] = await Promise.all([fetchPlan(supabase), fetchIsAdmin(supabase), fetchMyRequest(supabase)]);
+    setPlan(p);
+    setIsAdmin(admin);
+    setRequest(req);
   }, [mode, userId]);
+
+  const canRequest = mode !== "demo" && Boolean(supabase) && Boolean(userId);
+  const submitRequest = useCallback(
+    async (contact: string, note: string) => {
+      if (!supabase) throw new Error("Upgrade requests need the database connection.");
+      setRequest(await sendUpgradeRequest(supabase, contact, note));
+    },
+    [],
+  );
 
   useEffect(() => {
     void refresh();
@@ -54,8 +79,8 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<PlanContextValue>(
-    () => ({ plan, isPro: plan === "pro", refresh, showUpgrade, requirePro }),
-    [plan, refresh, showUpgrade, requirePro],
+    () => ({ plan, isPro: plan === "pro", isAdmin, request, canRequest, submitRequest, refresh, showUpgrade, requirePro }),
+    [plan, isAdmin, request, canRequest, submitRequest, refresh, showUpgrade, requirePro],
   );
 
   return (
@@ -73,8 +98,6 @@ export function usePlan(): PlanContextValue {
 }
 
 function UpgradeDialog({ plan, feature, onClose }: { plan: Plan; feature?: ProFeature; onClose: () => void }) {
-  const link = upgradeLink(import.meta.env.VITE_UPGRADE_CONTACT as string | undefined);
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -135,24 +158,7 @@ function UpgradeDialog({ plan, feature, onClose }: { plan: Plan; feature?: ProFe
           </tbody>
         </table>
 
-        {plan === "pro" ? (
-          <button onClick={onClose} className="w-full h-11 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700">
-            Close
-          </button>
-        ) : link ? (
-          <a
-            href={link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center w-full h-11 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            {link.label}
-          </a>
-        ) : (
-          <p className="text-sm text-slate-700 bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
-            To upgrade, please contact the Marketectify team. We will switch your account to Pro.
-          </p>
-        )}
+        <UpgradeForm />
       </div>
     </>,
     document.body,
