@@ -1,5 +1,6 @@
 import { FunctionsHttpError, type SupabaseClient } from "@supabase/supabase-js";
 import { AIError, readFunctionError } from "./ai";
+import { ALL_PLATFORMS } from "./platforms";
 import type { Platform } from "../types";
 
 export interface SocialAccount {
@@ -29,7 +30,7 @@ interface Row {
   stats_updated_at: string | null;
 }
 
-const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok", "youtube"];
+const PLATFORMS: Platform[] = ALL_PLATFORMS;
 
 export function fromRow(r: Row): SocialAccount {
   return {
@@ -101,8 +102,19 @@ export async function startMetaConnect(client: SupabaseClient): Promise<string> 
   return url;
 }
 
+/** Asks the server for the LinkedIn sign-in address (personal profile posting). */
+export async function startLinkedInConnect(client: SupabaseClient): Promise<string> {
+  const { data, error } = await client.functions.invoke("linkedin-auth", { body: {}, timeout: 30_000 });
+  if (error) throw await metaError(error);
+  const url = (data as { url?: unknown } | null)?.url;
+  if (typeof url !== "string" || !url.startsWith("https://www.linkedin.com/")) {
+    throw new AIError("error", "Unexpected answer from the server. Please try again.");
+  }
+  return url;
+}
+
 export interface PublishOutcome {
-  platform: "facebook" | "instagram";
+  platform: "facebook" | "instagram" | "linkedin";
   ok: boolean;
   message?: string;
 }
@@ -154,7 +166,18 @@ const CONNECT_ERRORS: Record<string, string> = {
   not_configured: "YouTube is not set up on the server yet (missing Google secrets).",
 };
 
-export function connectErrorMessage(code: string, provider: "youtube" | "meta" = "youtube"): string {
+const LINKEDIN_ERRORS: Record<string, string> = {
+  denied: "You cancelled the LinkedIn connection.",
+  bad_state: "The connection link expired. Please press Connect again.",
+  token_failed: "LinkedIn did not accept the sign-in. Press Connect and try again.",
+  profile_failed: "LinkedIn did not share your profile. Check that \"Sign In with LinkedIn using OpenID Connect\" is added to the app.",
+  linkedin_unreachable: "Could not reach LinkedIn. Please try again.",
+  save_failed: "Connected, but saving failed. Has the 0012_more_platforms.sql database setup been run?",
+  not_configured: "LinkedIn is not set up on the server yet (missing LinkedIn secrets).",
+};
+
+export function connectErrorMessage(code: string, provider: "youtube" | "meta" | "linkedin" = "youtube"): string {
+  if (provider === "linkedin") return LINKEDIN_ERRORS[code] ?? "Could not connect LinkedIn. Please try again.";
   if (provider === "meta") return META_ERRORS[code] ?? "Could not connect Facebook. Please try again.";
   return CONNECT_ERRORS[code] ?? "Could not connect YouTube. Please try again.";
 }

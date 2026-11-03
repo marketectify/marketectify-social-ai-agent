@@ -14,8 +14,10 @@ import { PLATFORMS, RANGES, buildReportCsv, computeAnalytics, formatDuration, fo
 const platformChartColors: Record<Platform, string> = {
   facebook: "#3b82f6",
   instagram: "#ec4899",
+  linkedin: "#0369a1",
   tiktok: "#06b6d4",
   youtube: "#ef4444",
+  gbp: "#059669",
 };
 
 export default function Analytics() {

@@ -29,13 +29,15 @@ import { timeAgo } from "../lib/dates";
 import { AIError, LANGUAGES, TONES, generate, type ReplyResult } from "../lib/ai";
 import { loadAutoDraft, pickForDrafting, pruneDrafts, saveAutoDraft, type AutoDraftState } from "../lib/autoDraft";
 
-const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok", "youtube"];
+const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok", "youtube", "gbp"];
 
 const platformColor: Record<Platform, string> = {
   facebook: "text-blue-600 dark:text-blue-400",
   instagram: "text-pink-600 dark:text-pink-400",
+  linkedin: "text-sky-700 dark:text-sky-300",
   tiktok: "text-cyan-700 dark:text-cyan-300",
   youtube: "text-red-600 dark:text-red-400",
+  gbp: "text-emerald-700 dark:text-emerald-300",
 };
 
 const AVATARS = ["bg-blue-600", "bg-sky-700", "bg-indigo-600", "bg-pink-600", "bg-cyan-700", "bg-emerald-700"];

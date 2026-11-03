@@ -17,7 +17,7 @@ interface TopNavProps {
   onToggleTheme: () => void;
 }
 
-const platforms: Platform[] = ["facebook", "instagram", "tiktok", "youtube"];
+const platforms: Platform[] = ["facebook", "instagram", "linkedin", "tiktok", "youtube"];
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);

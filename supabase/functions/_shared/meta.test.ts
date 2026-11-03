@@ -72,6 +72,7 @@ function make(over: Partial<MetaDeps> = {}, replies: Record<string, GraphResult>
     saveAccounts: async (ws, rows) => void saved.push({ ws, rows }),
     loadAccount: async (_ws, platform) => ({ platform, externalId: platform === "facebook" ? "P1" : "IG1", displayName: "Acme", handle: platform === "instagram" ? "@acme" : "", avatarUrl: "", followers: 1, mediaCount: 0, token: "PT" }),
     loadPost: async () => post(),
+    publishLinkedIn: async () => ({ ok: true, id: "urn:li:share:77" }),
     claimPost: async (id) => (claimed.has(id) ? false : (claimed.add(id), true)),
     releasePost: async (id) => void (claimed.delete(id), released.push(id)),
     markPost: async (id, patch) => void marks.push({ id, ...patch }),
@@ -192,6 +193,22 @@ describe("publishPost", () => {
     expect(second.calls.some((c) => c.path === "P1/photos")).toBe(false);
     expect(second.marks[0]).toMatchObject({ externalIds: { facebook: "P1_900", instagram: "ig900" }, published: true });
   });
+  it("sends LinkedIn posts through the LinkedIn publisher and keeps its reason when it fails", async () => {
+    const ok = make();
+    const r = await publishPost(post({ platforms: ["linkedin"], mediaUrl: null }), ok.d);
+    expect(r.allDone).toBe(true);
+    expect(ok.calls).toHaveLength(0); // nothing goes to Meta
+    expect(ok.marks[0]).toMatchObject({ externalIds: { linkedin: "urn:li:share:77" }, published: true, error: null });
+
+    const bad = make({ publishLinkedIn: async () => ({ ok: false, message: "The LinkedIn login expired." }) });
+    await publishPost(post({ platforms: ["linkedin", "facebook"], mediaUrl: null }), bad.d);
+    expect(bad.marks[0]).toMatchObject({ published: false, externalIds: { facebook: "P1_901" } });
+    expect(bad.marks[0].error).toBe("linkedin: The LinkedIn login expired.");
+
+    const none = make({ loadAccount: async () => null });
+    await publishPost(post({ platforms: ["linkedin"] }), none.d);
+    expect(none.marks[0].error).toMatch(/LinkedIn is not connected/);
+  });
   it("does not call it published while TikTok or YouTube is still left to do by hand", async () => {
     const { d, marks } = make();
     await publishPost(post({ platforms: ["facebook", "tiktok"] }), d);
@@ -271,6 +288,8 @@ describe("api: publish, sync, reply", () => {
     expect((await handleApi(req({ action: "publish", postId: "p1" }), done.d)).status).toBe(409);
     const tt = make({ loadPost: async () => post({ platforms: ["tiktok"] }) });
     expect((await handleApi(req({ action: "publish", postId: "p1" }), tt.d)).status).toBe(400);
+    const li = make({ loadPost: async () => post({ platforms: ["linkedin"], mediaUrl: null }) });
+    expect((await handleApi(req({ action: "publish", postId: "p1" }), li.d)).status).toBe(200);
     const missing = make({ loadPost: async () => null });
     expect((await handleApi(req({ action: "publish", postId: "p1" }), missing.d)).status).toBe(404);
 

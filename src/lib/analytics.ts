@@ -1,4 +1,5 @@
 import type { Message, Platform, Post, PostStatus } from "../types";
+import { ALL_PLATFORMS } from "./platforms";
 
 export type RangeId = "30d" | "90d" | "180d" | "all";
 
@@ -9,10 +10,10 @@ export const RANGES: { id: RangeId; label: string; days: number | null }[] = [
   { id: "all", label: "All time", days: null },
 ];
 
-export const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok", "youtube"];
+export const PLATFORMS: Platform[] = ALL_PLATFORMS;
 const STATUSES: PostStatus[] = ["draft", "pending", "approved", "published"];
 
-const emptyByPlatform = (): Record<Platform, number> => ({ facebook: 0, instagram: 0, tiktok: 0, youtube: 0 });
+const emptyByPlatform = (): Record<Platform, number> => ({ facebook: 0, instagram: 0, linkedin: 0, tiktok: 0, youtube: 0, gbp: 0 });
 
 export interface MonthBucket {
   key: string; // 2026-10

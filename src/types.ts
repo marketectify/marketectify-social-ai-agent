@@ -1,4 +1,5 @@
 export type TabId =
+  | "accounts"
   | "overview"
   | "studio"
   | "design"
@@ -8,7 +9,7 @@ export type TabId =
   | "plan"
   | "admin";
 
-export type Platform = "facebook" | "instagram" | "tiktok" | "youtube";
+export type Platform = "facebook" | "instagram" | "linkedin" | "tiktok" | "youtube" | "gbp";
 
 /**
  * draft     – being written, not sent for approval yet

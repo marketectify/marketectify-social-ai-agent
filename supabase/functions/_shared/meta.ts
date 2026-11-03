@@ -14,9 +14,14 @@ export const META_SCOPES = [
 ];
 
 export type MetaPlatform = "facebook" | "instagram";
+/** Platforms this publisher sends posts to by itself. */
+export type AutoPlatform = MetaPlatform | "linkedin";
+const AUTO: AutoPlatform[] = ["facebook", "instagram", "linkedin"];
+const isAuto = (p: string): p is AutoPlatform => (AUTO as string[]).includes(p);
+const NAMES: Record<AutoPlatform, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn" };
 
 export interface MetaAccountRow {
-  platform: MetaPlatform;
+  platform: AutoPlatform;
   externalId: string;
   displayName: string;
   handle: string;
@@ -25,6 +30,8 @@ export interface MetaAccountRow {
   mediaCount: number;
   /** Page access token (also used for the linked Instagram account). */
   token: string;
+  /** When the login stops working (LinkedIn: 60 days). Null/absent: it does not expire. */
+  expiresAt?: string | null;
 }
 
 export interface PostRow {
@@ -35,6 +42,7 @@ export interface PostRow {
   platforms: string[];
   status: string;
   mediaUrl: string | null;
+  mediaKind?: "image" | "video" | null;
   externalIds: Record<string, string>;
 }
 
@@ -75,7 +83,9 @@ export interface MetaDeps {
   /** One call to the Graph API. `token` is sent as access_token. */
   graph: (method: "GET" | "POST", path: string, params: Record<string, string>, token?: string) => Promise<GraphResult>;
   saveAccounts: (workspaceId: string, rows: MetaAccountRow[]) => Promise<void>;
-  loadAccount: (workspaceId: string, platform: MetaPlatform) => Promise<MetaAccountRow | null>;
+  loadAccount: (workspaceId: string, platform: AutoPlatform) => Promise<MetaAccountRow | null>;
+  /** Sends the post to LinkedIn (see linkedin.ts). */
+  publishLinkedIn: (post: PostRow, account: MetaAccountRow) => Promise<{ ok: boolean; id?: string; message?: string }>;
   loadPost: (workspaceId: string, postId: string) => Promise<PostRow | null>;
   /** Marks the post as "being published". False when another run already holds it (so nothing is posted twice). */
   claimPost: (postId: string) => Promise<boolean>;
@@ -235,17 +245,21 @@ export function graphError(res: GraphResult): string {
 // ---------------------------------------------------------------------------
 
 export interface PublishOutcome {
-  platform: MetaPlatform;
+  platform: AutoPlatform;
   ok: boolean;
   id?: string;
   message?: string;
 }
 
-export async function publishToPlatform(post: PostRow, platform: MetaPlatform, deps: MetaDeps): Promise<PublishOutcome> {
+export async function publishToPlatform(post: PostRow, platform: AutoPlatform, deps: MetaDeps): Promise<PublishOutcome> {
   const account = await deps.loadAccount(post.workspaceId, platform);
-  if (!account) return { platform, ok: false, message: `${platform === "facebook" ? "Facebook" : "Instagram"} is not connected.` };
+  if (!account) return { platform, ok: false, message: `${NAMES[platform]} is not connected.` };
   const caption = buildCaption(post);
   try {
+    if (platform === "linkedin") {
+      const r = await deps.publishLinkedIn(post, account);
+      return r.ok && r.id ? { platform, ok: true, id: r.id } : { platform, ok: false, message: r.message ?? "LinkedIn did not accept the post." };
+    }
     if (platform === "facebook") {
       const res = post.mediaUrl
         ? await deps.graph("POST", `${account.externalId}/photos`, { url: post.mediaUrl, caption }, account.token)
@@ -272,7 +286,7 @@ export async function publishToPlatform(post: PostRow, platform: MetaPlatform, d
 
 /** Publishes to every Facebook/Instagram platform of the post that is not published yet. Updates the post row. */
 export async function publishPost(post: PostRow, deps: MetaDeps): Promise<{ outcomes: PublishOutcome[]; allDone: boolean }> {
-  const targets = post.platforms.filter((p): p is MetaPlatform => (p === "facebook" || p === "instagram") && !post.externalIds[p]);
+  const targets = post.platforms.filter((p): p is AutoPlatform => isAuto(p) && !post.externalIds[p]);
   const outcomes: PublishOutcome[] = [];
   const ids = { ...post.externalIds };
   for (const platform of targets) {
@@ -280,11 +294,11 @@ export async function publishPost(post: PostRow, deps: MetaDeps): Promise<{ outc
     outcomes.push(o);
     if (o.ok && o.id) ids[platform] = o.id;
   }
-  const wanted = post.platforms.filter((p) => p === "facebook" || p === "instagram");
+  const wanted = post.platforms.filter(isAuto);
   const allDone = wanted.length > 0 && wanted.every((p) => ids[p]);
   const errors = outcomes.filter((o) => !o.ok).map((o) => `${o.platform}: ${o.message}`);
   // A post that also targets TikTok/YouTube is only "published" when nothing else is left to do by hand.
-  const onlyMeta = post.platforms.every((p) => p === "facebook" || p === "instagram");
+  const onlyMeta = post.platforms.every(isAuto);
   await deps.markPost(post.id, {
     externalIds: ids,
     published: allDone && onlyMeta,
@@ -443,8 +457,8 @@ export async function handleApi(req: Request, deps: MetaDeps): Promise<Response>
     if (!post) return fail(404, "post_not_found", "Post not found.");
     if (post.status === "published") return fail(409, "already_published", "This post is already marked as published.");
     if (post.status !== "approved") return fail(409, "not_approved", "Approve the post first. Only approved posts are published.");
-    if (!post.platforms.some((p) => p === "facebook" || p === "instagram")) {
-      return fail(400, "no_meta_platform", "This post has no Facebook or Instagram platform.");
+    if (!post.platforms.some(isAuto)) {
+      return fail(400, "no_meta_platform", "This post has no Facebook, Instagram or LinkedIn platform.");
     }
     if (!(await deps.claimPost(post.id).catch(() => false))) return fail(409, "busy", "This post is being published right now. Wait a moment and reload.");
     try {

@@ -13,9 +13,9 @@ import { statusConfig } from "../lib/status";
 import { fromLocalInputValue, toLocalInputValue } from "../lib/dates";
 import { defaultSchedule } from "../lib/schedule";
 import { parseHashtags } from "../lib/hashtags";
+import { POST_PLATFORMS, isAutoPublish } from "../lib/platforms";
 
 const CAPTION_LIMIT = 2200;
-const ALL_PLATFORMS = Object.keys(platformLabels) as Platform[];
 
 type Busy = "save" | "pending" | "approve" | "draft" | "delete" | null;
 
@@ -142,10 +142,10 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     }
   };
 
-  // Facebook and Instagram posts are sent by the server at the scheduled time (or right now with "Publish now").
-  const metaTargets = platforms.filter((p) => p === "facebook" || p === "instagram");
+  // Facebook, Instagram and LinkedIn posts are sent by the server at the scheduled time (or right now with "Publish now").
+  const metaTargets = platforms.filter(isAutoPublish);
   const metaMissing = metaTargets.filter((p) => !social.get(p));
-  const manualTargets = platforms.filter((p) => p !== "facebook" && p !== "instagram");
+  const manualTargets = platforms.filter((p) => !isAutoPublish(p));
   const canPublishNow = Boolean(supabase && post && status === "approved" && metaTargets.length > 0 && metaMissing.length === 0);
   const [publishing, setPublishing] = useState(false);
   const unsavedChanges = Boolean(
@@ -176,7 +176,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
         toast.success("Published.");
         onClose();
       } else {
-        toast.success("Sent to Facebook / Instagram. Publish the other platforms by hand, then mark it as published.");
+        toast.success("Sent to your connected accounts. Publish the other platforms by hand, then mark it as published.");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not publish. Please try again.");
@@ -370,7 +370,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
           <fieldset ref={platformsRef} disabled={locked}>
             <legend className="text-xs font-semibold text-slate-600 mb-1.5">Publish to</legend>
             <div className="grid grid-cols-2 gap-2">
-              {ALL_PLATFORMS.map((p) => {
+              {POST_PLATFORMS.map((p) => {
                 const Icon = platformIcons[p];
                 const selected = platforms.includes(p);
                 return (

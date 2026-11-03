@@ -250,6 +250,20 @@ the Privacy Policy and data deletion pages above. This takes days to weeks.
 
 ---
 
+## 13. Connect LinkedIn
+
+Needs your own LinkedIn developer app. Posting to your **personal profile** works right away. **Company Pages** and reading comments need extra approval from LinkedIn and are not included.
+
+1. Run `supabase/migrations/0012_more_platforms.sql` in the Supabase SQL editor (adds LinkedIn and Google Business as platforms).
+2. Go to https://www.linkedin.com/developers/apps and press **Create app**. LinkedIn asks for a Company Page to link; create an empty one if you have none.
+3. Open the app -> **Products** and add **Share on LinkedIn** and **Sign In with LinkedIn using OpenID Connect**.
+4. Open **Auth** and add this redirect URL: `https://wdgkekjqxodhvrfedeyc.supabase.co/functions/v1/linkedin-callback`
+5. Copy **Client ID** and **Client Secret** from the Auth tab. In Supabase -> Edge Functions -> Secrets add `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET` (`OAUTH_STATE_SECRET` and `SITE_URL` are the same as for YouTube).
+6. Run the **Deploy functions** workflow in GitHub Actions.
+7. In the dashboard open **Accounts** -> **Connect LinkedIn**.
+
+Notes: the LinkedIn login lasts about 60 days; connect again when the post says it expired. Pictures up to 8 MB are supported; video posts to LinkedIn are not yet. Optional secret `LINKEDIN_API_VERSION` (format YYYYMM) if LinkedIn retires the default version.
+
 ## Design Studio
 
 Open **Design Studio**, drag a heading, paragraph, box, circle or picture onto the canvas (or drop a picture file

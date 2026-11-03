@@ -9,6 +9,8 @@
 
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { GRAPH_VERSION, type MetaDeps, type MetaAccountRow, type PostRow } from "./meta.ts";
+import { publishToLinkedIn } from "./linkedin.ts";
+import { liFetchMedia, liHttp, linkedInVersion } from "./linkedin_deps.ts";
 
 const env = (name: string) => Deno.env.get(name) ?? "";
 
@@ -37,9 +39,10 @@ export function makeMetaDeps(): MetaDeps {
     platforms: Array.isArray(r.platforms) ? r.platforms : [],
     status: r.status,
     mediaUrl: typeof r.media_url === "string" && r.media_url.startsWith("https://") ? r.media_url : null,
+    mediaKind: r.media_kind === "video" ? "video" : r.media_kind === "image" ? "image" : null,
     externalIds: r.external_ids && typeof r.external_ids === "object" ? r.external_ids : {},
   });
-  const POST_COLUMNS = "id,workspace_id,caption,hashtags,platforms,status,media_url,external_ids";
+  const POST_COLUMNS = "id,workspace_id,caption,hashtags,platforms,status,media_url,media_kind,external_ids";
 
   return {
     configured: Boolean(appId && appSecret && stateSecret && supabaseUrl && serviceKey),
@@ -121,7 +124,7 @@ export function makeMetaDeps(): MetaDeps {
     async loadAccount(workspaceId, platform) {
       const { data, error } = await admin()
         .from("social_accounts")
-        .select("platform,external_id,display_name,handle,avatar_url,subscribers,video_count,access_token")
+        .select("platform,external_id,display_name,handle,avatar_url,subscribers,video_count,access_token,token_expires_at")
         .eq("workspace_id", workspaceId)
         .eq("platform", platform)
         .maybeSingle();
@@ -136,6 +139,7 @@ export function makeMetaDeps(): MetaDeps {
         followers: data.subscribers,
         mediaCount: Number(data.video_count) || 0,
         token: data.access_token,
+        expiresAt: data.token_expires_at ?? null,
       };
       return row;
     },
@@ -162,6 +166,14 @@ export function makeMetaDeps(): MetaDeps {
     async releasePost(postId) {
       const { error } = await admin().from("posts").update({ publish_started_at: null }).eq("id", postId);
       if (error) throw new Error(error.message);
+    },
+
+    async publishLinkedIn(post, account) {
+      return publishToLinkedIn(
+        { caption: post.caption, hashtags: post.hashtags, mediaUrl: post.mediaUrl, mediaKind: post.mediaKind },
+        { externalId: account.externalId, displayName: account.displayName, avatarUrl: account.avatarUrl, token: account.token, expiresAt: account.expiresAt ?? null },
+        { http: liHttp, fetchMedia: liFetchMedia, apiVersion: linkedInVersion(), now: () => Date.now() },
+      );
     },
 
     async markPost(postId, patch) {
@@ -220,7 +232,7 @@ export function makeMetaDeps(): MetaDeps {
         .eq("status", "approved")
         .is("publish_error", null)
         .lte("scheduled_at", nowIso)
-        .overlaps("platforms", ["facebook", "instagram"])
+        .overlaps("platforms", ["facebook", "instagram", "linkedin"])
         .order("scheduled_at", { ascending: true })
         .limit(limit);
       if (error) throw new Error(error.message);

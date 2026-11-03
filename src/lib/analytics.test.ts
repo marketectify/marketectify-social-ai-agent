@@ -34,7 +34,7 @@ describe("computeAnalytics", () => {
     );
     expect(a.posts.total).toBe(4);
     expect(a.posts.byStatus).toEqual({ draft: 1, pending: 0, approved: 2, published: 1 });
-    expect(a.posts.byPlatform).toEqual({ facebook: 1, instagram: 1, tiktok: 2, youtube: 0 });
+    expect(a.posts.byPlatform).toEqual({ facebook: 1, instagram: 1, linkedin: 0, tiktok: 2, youtube: 0, gbp: 0 });
     expect(a.posts.upcoming).toBe(1);
   });
 

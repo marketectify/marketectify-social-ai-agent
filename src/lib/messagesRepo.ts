@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Message, MessageInput, MessageKind, MessageStatus, Platform } from "../types";
 import { demoMessages } from "./demoData";
+import { ALL_PLATFORMS } from "./platforms";
 import { newId } from "./postsRepo";
 
 export interface MessagesRepo {
@@ -12,7 +13,7 @@ export interface MessagesRepo {
 
 export const MESSAGE_LIMITS = { name: 80, handle: 80, body: 2000, reply: 2000 } as const;
 
-const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok", "youtube"];
+const PLATFORMS: Platform[] = ALL_PLATFORMS;
 const KINDS: MessageKind[] = ["comment", "dm"];
 const STATUSES: MessageStatus[] = ["unread", "read", "replied"];
 

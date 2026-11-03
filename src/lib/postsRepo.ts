@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ALL_PLATFORMS } from "./platforms";
 import type { Platform, Post, PostInput, PostMedia, PostStatus } from "../types";
 import { demoPosts } from "./demoData";
 
@@ -10,7 +11,7 @@ export interface PostsRepo {
   remove(id: string): Promise<void>;
 }
 
-const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok", "youtube"];
+const PLATFORMS: Platform[] = ALL_PLATFORMS;
 const STATUSES: PostStatus[] = ["draft", "pending", "approved", "published"];
 
 export function newId(): string {

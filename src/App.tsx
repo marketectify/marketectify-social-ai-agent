@@ -7,6 +7,7 @@ import Overview from "./components/Overview";
 import Studio from "./components/Studio";
 import Designer from "./components/Designer";
 import HelpAssistant from "./components/HelpAssistant";
+import Accounts from "./components/Accounts";
 import PlanPage from "./components/PlanPage";
 import AdminPage from "./components/AdminPage";
 import Calendar from "./components/Calendar";
@@ -55,7 +56,8 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
     const problem = params.get("connect_error");
     if (!connected && !problem) return;
     window.history.replaceState(null, "", window.location.pathname);
-    const provider = params.get("p") === "meta" ? "meta" : "youtube";
+    const p = params.get("p");
+    const provider = p === "meta" ? "meta" : p === "linkedin" ? "linkedin" : "youtube";
     if (problem) {
       toast.error(connectErrorMessage(problem, provider));
       return;
@@ -66,6 +68,8 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
           ? "Facebook and Instagram connected"
           : "Facebook connected. No Instagram account was found: link an Instagram Business account to your Page, then connect again.",
       );
+    } else if (connected === "linkedin") {
+      toast.success("LinkedIn connected");
     } else {
       toast.success("YouTube connected");
     }
@@ -115,6 +119,7 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
           {activeTab === "calendar" && <Calendar />}
           {activeTab === "inbox" && <Inbox />}
           {activeTab === "analytics" && <Analytics />}
+          {activeTab === "accounts" && <Accounts />}
           {activeTab === "plan" && <PlanPage />}
           {activeTab === "admin" && <AdminPage />}
         </main>

@@ -28,7 +28,7 @@ export const LANGUAGES = [
 ] as const;
 export type Language = (typeof LANGUAGES)[number];
 
-export const PLATFORM_FOCUS = ["instagram", "facebook", "tiktok", "youtube"] as const;
+export const PLATFORM_FOCUS = ["instagram", "facebook", "linkedin", "tiktok", "youtube", "gbp"] as const;
 export type PlatformFocus = (typeof PLATFORM_FOCUS)[number];
 
 export const LIMITS = {
@@ -150,6 +150,10 @@ const PLATFORM_GUIDE: Record<PlatformFocus, string> = {
     "Instagram: a strong first line (the hook) that works before the 'more' cut-off, short paragraphs, a clear call to action, 5 to 10 hashtags.",
   facebook:
     "Facebook: conversational and community minded, one to three short paragraphs, end with a question or call to action, 1 to 3 hashtags.",
+  linkedin:
+    "LinkedIn: professional but human, a strong first line before the 'see more' cut-off, short paragraphs with line breaks, a useful insight or story, end with a question, 3 to 5 hashtags.",
+  gbp:
+    "Google Business Profile post: plain and local, 1 to 3 short sentences about the offer, update or event, mention what the customer can do next (call, visit, book), no hashtags, under 300 words.",
   tiktok:
     "TikTok: very short and punchy (under 150 characters), a curiosity driven hook, natural and not cringe, 3 to 5 hashtags.",
   youtube:
