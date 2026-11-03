@@ -2,8 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PostMedia } from "../types";
 
 export const MEDIA_BUCKET = "post-media";
-/** Largest file accepted for a post picture (videos get their own limit later). */
+/** Largest file accepted for a post picture. */
 export const MEDIA_MAX_BYTES = 8 * 1024 * 1024;
+/** Largest video. Supabase's free plan allows 50 MB per file; a paid plan can raise it (also in the bucket settings). */
+export const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 
 /** Where post pictures are kept. Two implementations: browser (demo) and Supabase Storage. */
 export interface MediaStore {
@@ -83,15 +85,16 @@ export function createSupabaseMediaStore(client: SupabaseClient, workspaceId: st
   return {
     async upload(original, kind) {
       const file = kind === "image" ? await toJpeg(original) : original;
-      if (file.size > MEDIA_MAX_BYTES * (kind === "video" ? 8 : 1)) throw new Error("The file is too large.");
+      if (kind === "video" && file.size > VIDEO_MAX_BYTES) throw new Error("The video is too large. The limit is 50 MB.");
+      if (kind === "image" && file.size > MEDIA_MAX_BYTES) throw new Error("The picture is too large. The limit is 8 MB.");
       const type = file.type || (kind === "video" ? "video/mp4" : "image/jpeg");
       const path = `${workspaceId}/${newName()}.${extensionFor(type)}`;
       const { error } = await client.storage.from(MEDIA_BUCKET).upload(path, file, { contentType: type, upsert: false, cacheControl: "31536000" });
       if (error) {
         throw new Error(
           /bucket not found/i.test(error.message)
-            ? "Picture storage is not set up yet. Run the 0008 SQL file (see docs/SETUP.md)."
-            : `Could not upload the picture: ${error.message}`,
+            ? "File storage is not set up yet. Run the 0008 SQL file (see docs/SETUP.md)."
+            : `Could not upload the file: ${error.message}`,
         );
       }
       const { data } = client.storage.from(MEDIA_BUCKET).getPublicUrl(path);

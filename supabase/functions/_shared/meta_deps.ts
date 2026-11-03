@@ -168,6 +168,8 @@ export function makeMetaDeps(): MetaDeps {
       if (error) throw new Error(error.message);
     },
 
+    sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+
     async publishLinkedIn(post, account) {
       return publishToLinkedIn(
         { caption: post.caption, hashtags: post.hashtags, mediaUrl: post.mediaUrl, mediaKind: post.mediaKind },

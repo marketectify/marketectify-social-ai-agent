@@ -264,6 +264,12 @@ Needs your own LinkedIn developer app. Posting to your **personal profile** work
 
 Notes: the LinkedIn login lasts about 60 days; connect again when the post says it expired. Pictures up to 8 MB are supported; video posts to LinkedIn are not yet. Optional secret `LINKEDIN_API_VERSION` (format YYYYMM) if LinkedIn retires the default version.
 
+### Videos
+
+You can attach an **MP4 video** (up to 50 MB) to a post. Facebook publishes it as a video and Instagram as a **Reel** (Instagram needs 3 to 90 seconds, H.264 video and AAC audio; vertical 9:16 looks best). Instagram can take up to about 100 seconds to process it; if it says "still processing", press **Publish now** again after a minute. LinkedIn video posts are not supported yet, and YouTube/TikTok videos are still posted by hand.
+
+Supabase's free plan accepts files up to 50 MB. On a paid plan raise "Global file size limit" in Storage settings and the limit of the `post-media` bucket if you need bigger videos.
+
 ## Design Studio
 
 Open **Design Studio**, drag a heading, paragraph, box, circle or picture onto the canvas (or drop a picture file

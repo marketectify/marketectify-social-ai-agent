@@ -85,6 +85,8 @@ export interface MetaDeps {
   saveAccounts: (workspaceId: string, rows: MetaAccountRow[]) => Promise<void>;
   loadAccount: (workspaceId: string, platform: AutoPlatform) => Promise<MetaAccountRow | null>;
   /** Sends the post to LinkedIn (see linkedin.ts). */
+  /** Waits (used while Instagram processes a video). Tests pass an instant one. */
+  sleep: (ms: number) => Promise<void>;
   publishLinkedIn: (post: PostRow, account: MetaAccountRow) => Promise<{ ok: boolean; id?: string; message?: string }>;
   loadPost: (workspaceId: string, postId: string) => Promise<PostRow | null>;
   /** Marks the post as "being published". False when another run already holds it (so nothing is posted twice). */
@@ -251,6 +253,10 @@ export interface PublishOutcome {
   message?: string;
 }
 
+/** Instagram needs time to process a video: up to about 100 seconds in total. */
+export const VIDEO_POLLS = 25;
+export const VIDEO_POLL_MS = 4000;
+
 export async function publishToPlatform(post: PostRow, platform: AutoPlatform, deps: MetaDeps): Promise<PublishOutcome> {
   const account = await deps.loadAccount(post.workspaceId, platform);
   if (!account) return { platform, ok: false, message: `${NAMES[platform]} is not connected.` };
@@ -259,6 +265,37 @@ export async function publishToPlatform(post: PostRow, platform: AutoPlatform, d
     if (platform === "linkedin") {
       const r = await deps.publishLinkedIn(post, account);
       return r.ok && r.id ? { platform, ok: true, id: r.id } : { platform, ok: false, message: r.message ?? "LinkedIn did not accept the post." };
+    }
+    const isVideo = post.mediaKind === "video" && Boolean(post.mediaUrl);
+    if (platform === "facebook" && isVideo) {
+      const res = await deps.graph("POST", `${account.externalId}/videos`, { file_url: post.mediaUrl!, description: caption }, account.token);
+      const id = res.body?.id;
+      if (res.status >= 400 || typeof id !== "string") return { platform, ok: false, message: graphError(res) };
+      return { platform, ok: true, id };
+    }
+    if (platform === "instagram" && isVideo) {
+      // Reels: create the container, wait until Instagram has processed the video, then publish.
+      const created = await deps.graph("POST", `${account.externalId}/media`, { media_type: "REELS", video_url: post.mediaUrl!, caption }, account.token);
+      const creation = created.body?.id;
+      if (created.status >= 400 || typeof creation !== "string") return { platform, ok: false, message: graphError(created) };
+      let ready = false;
+      for (let i = 0; i < VIDEO_POLLS; i++) {
+        const st = await deps.graph("GET", creation, { fields: "status_code" }, account.token);
+        const code = st.body?.status_code;
+        if (code === "FINISHED") {
+          ready = true;
+          break;
+        }
+        if (code === "ERROR" || code === "EXPIRED") {
+          return { platform, ok: false, message: "Instagram could not process the video. Use an MP4 (H.264 video, AAC audio), 3 to 90 seconds, vertical 9:16 works best." };
+        }
+        await deps.sleep(VIDEO_POLL_MS);
+      }
+      if (!ready) return { platform, ok: false, message: "Instagram is still processing the video. Press Publish now again in a minute." };
+      const done = await deps.graph("POST", `${account.externalId}/media_publish`, { creation_id: creation }, account.token);
+      const id = done.body?.id;
+      if (done.status >= 400 || typeof id !== "string") return { platform, ok: false, message: graphError(done) };
+      return { platform, ok: true, id };
     }
     if (platform === "facebook") {
       const res = post.mediaUrl

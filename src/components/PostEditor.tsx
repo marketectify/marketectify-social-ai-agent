@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertCircle, Check, Clock, Copy, Download, ImagePlus, Loader2, Send, Trash2, X } from "lucide-react";
+import { AlertCircle, Check, Clock, Copy, Download, ImagePlus, Video, Loader2, Send, Trash2, X } from "lucide-react";
 import type { Platform, Post, PostInput, PostMedia, PostStatus } from "../types";
 import { platformLabels } from "../data";
 import { platformIcons } from "./PlatformIcon";
@@ -13,6 +13,7 @@ import { statusConfig } from "../lib/status";
 import { fromLocalInputValue, toLocalInputValue } from "../lib/dates";
 import { defaultSchedule } from "../lib/schedule";
 import { parseHashtags } from "../lib/hashtags";
+import { VIDEO_MAX_BYTES } from "../lib/mediaStore";
 import { POST_PLATFORMS, isAutoPublish } from "../lib/platforms";
 
 const CAPTION_LIMIT = 2200;
@@ -77,10 +78,21 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     return () => URL.revokeObjectURL(url);
   }, [pendingFile]);
 
+  const pendingKind: PostMedia["kind"] = pendingFile?.type.startsWith("video/") ? "video" : "image";
+  const shownKind: PostMedia["kind"] = pendingFile ? pendingKind : media?.kind ?? "image";
   const pickFile = (file: File | undefined) => {
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
-      setError("Please choose a PNG, JPG or WebP picture.");
+    const isVideo = file.type === "video/mp4";
+    if (!isVideo && !/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+      setError("Please choose a PNG, JPG or WebP picture, or an MP4 video.");
+      return;
+    }
+    if (isVideo && !supabase) {
+      setError("Videos need a signed-in account (not available in demo mode).");
+      return;
+    }
+    if (isVideo && file.size > VIDEO_MAX_BYTES) {
+      setError("This video is larger than 50 MB. Compress it (for example 1080p, H.264) and try again.");
       return;
     }
     setError(null);
@@ -95,6 +107,9 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     if (!title.trim()) return "Please give the post a title.";
     if (target === "pending" || target === "approved") {
       if (platforms.length === 0) return "Choose at least one platform.";
+      if (shownKind === "video" && (pendingFile || media) && platforms.includes("linkedin")) {
+        return "LinkedIn video posts are not supported yet. Remove LinkedIn or use a picture.";
+      }
       const when = fromLocalInputValue(schedule);
       if (!when) return "Pick a date and time.";
       if (target === "approved" && new Date(when).getTime() <= Date.now()) {
@@ -115,7 +130,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     setBusy(kind);
     let uploaded: PostMedia | null = null;
     try {
-      if (pendingFile) uploaded = await uploadMedia(pendingFile, "image");
+      if (pendingFile) uploaded = await uploadMedia(pendingFile, pendingKind);
       const input: PostInput = {
         title: title.trim(),
         caption: caption.trim(),
@@ -318,18 +333,28 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-slate-600 mb-1.5">Picture</p>
+            <p className="text-xs font-semibold text-slate-600 mb-1.5">Picture or video</p>
             {(pendingUrl ?? media?.url) ? (
               <div className="flex items-start gap-3">
-                <img
-                  src={pendingUrl ?? media?.url}
-                  alt="Picture of this post"
-                  className="w-28 h-28 object-cover rounded-xl border border-slate-200 bg-slate-100/50"
-                />
+                {shownKind === "video" ? (
+                  <video
+                    src={pendingUrl ?? media?.url}
+                    controls
+                    preload="metadata"
+                    aria-label="Video of this post"
+                    className="w-40 max-h-56 rounded-xl border border-slate-200 bg-black"
+                  />
+                ) : (
+                  <img
+                    src={pendingUrl ?? media?.url}
+                    alt="Picture of this post"
+                    className="w-28 h-28 object-cover rounded-xl border border-slate-200 bg-slate-100/50"
+                  />
+                )}
                 {!locked && (
                   <div className="flex flex-col gap-2">
                     <button type="button" onClick={() => fileInput.current?.click()} className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100/60">
-                      Change picture
+                      Change file
                     </button>
                     <button
                       type="button"
@@ -339,7 +364,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
                       }}
                       className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-500/10"
                     >
-                      Remove picture
+                      Remove file
                     </button>
                   </div>
                 )}
@@ -351,15 +376,15 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
                 onClick={() => fileInput.current?.click()}
                 className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-slate-300 text-sm text-slate-700 hover:bg-slate-100/50 disabled:opacity-60"
               >
-                <ImagePlus className="w-4 h-4" aria-hidden="true" /> Add a picture
+                <ImagePlus className="w-4 h-4" aria-hidden="true" /> <Video className="w-4 h-4 -ml-1" aria-hidden="true" /> Add a picture or video
               </button>
             )}
             <input
               ref={fileInput}
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg,image/webp,video/mp4"
               className="sr-only"
-              aria-label="Choose a picture file"
+              aria-label="Choose a picture or video file"
               onChange={(e) => {
                 pickFile(e.target.files?.[0]);
                 e.target.value = "";

@@ -72,6 +72,7 @@ function make(over: Partial<MetaDeps> = {}, replies: Record<string, GraphResult>
     saveAccounts: async (ws, rows) => void saved.push({ ws, rows }),
     loadAccount: async (_ws, platform) => ({ platform, externalId: platform === "facebook" ? "P1" : "IG1", displayName: "Acme", handle: platform === "instagram" ? "@acme" : "", avatarUrl: "", followers: 1, mediaCount: 0, token: "PT" }),
     loadPost: async () => post(),
+    sleep: async () => {},
     publishLinkedIn: async () => ({ ok: true, id: "urn:li:share:77" }),
     claimPost: async (id) => (claimed.has(id) ? false : (claimed.add(id), true)),
     releasePost: async (id) => void (claimed.delete(id), released.push(id)),
@@ -166,6 +167,48 @@ describe("publishPost", () => {
     expect(calls.find((c) => c.path === "IG1/media")!.params.image_url).toBe(JPG);
     expect(calls.find((c) => c.path === "IG1/media_publish")!.params.creation_id).toBe("c1");
     expect(marks).toEqual([{ id: "p1", externalIds: { facebook: "P1_900", instagram: "ig900" }, published: true, error: null }]);
+  });
+  it("publishes a video as a Facebook video and an Instagram Reel after Instagram has processed it", async () => {
+    const MP4 = "https://x.supabase.co/storage/v1/object/public/post-media/w1/v.mp4";
+    let polls = 0;
+    const { d, calls, marks } = make({}, {});
+    const base = d.graph;
+    d.graph = async (method, path, params, token) => {
+      if (method === "GET" && path === "c1") {
+        calls.push({ method, path, params, token });
+        polls++;
+        return { status: 200, body: { status_code: polls < 3 ? "IN_PROGRESS" : "FINISHED" } };
+      }
+      if (path === "P1/videos") {
+        calls.push({ method, path, params, token });
+        return { status: 200, body: { id: "vid1" } };
+      }
+      return base(method, path, params, token);
+    };
+    const r = await publishPost(post({ mediaUrl: MP4, mediaKind: "video" }), d);
+    expect(r.allDone).toBe(true);
+    expect(calls.find((c) => c.path === "P1/videos")!.params).toEqual({ file_url: MP4, description: "Hello\n\n#sale #new" });
+    expect(calls.some((c) => c.path === "P1/photos")).toBe(false);
+    expect(calls.find((c) => c.path === "IG1/media")!.params).toMatchObject({ media_type: "REELS", video_url: MP4 });
+    expect(polls).toBe(3);
+    expect(marks[0]).toMatchObject({ externalIds: { facebook: "vid1", instagram: "ig900" }, published: true });
+  });
+  it("explains Reel problems: processing error and processing that takes too long", async () => {
+    const MP4 = "https://x.supabase.co/storage/v1/object/public/post-media/w1/v.mp4";
+    const run = async (status: string) => {
+      const m = make();
+      const base = m.d.graph;
+      m.d.graph = async (method, path, params, token) =>
+        method === "GET" && path === "c1" ? { status: 200, body: { status_code: status } } : base(method, path, params, token);
+      await publishPost(post({ platforms: ["instagram"], mediaUrl: MP4, mediaKind: "video" }), m.d);
+      return m;
+    };
+    const bad = await run("ERROR");
+    expect(bad.marks[0].error).toMatch(/could not process the video/);
+    expect(bad.calls.some((c) => c.path.endsWith("/media_publish"))).toBe(false);
+    const slow = await run("IN_PROGRESS");
+    expect(slow.marks[0].error).toMatch(/still processing/);
+    expect(slow.calls.some((c) => c.path.endsWith("/media_publish"))).toBe(false);
   });
   it("posts text-only to the Facebook feed", async () => {
     const { d, calls } = make();

@@ -4,6 +4,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Film,
   Loader2,
   Plus,
 } from "lucide-react";
@@ -50,6 +51,7 @@ function PostChip({ post, onOpen, compact }: { post: Post; onOpen: (p: Post) => 
         {post.media?.kind === "image" && (
           <img src={post.media.url} alt="" className={`shrink-0 rounded object-cover ${compact ? "w-4 h-4" : "w-6 h-6"}`} loading="lazy" />
         )}
+        {post.media?.kind === "video" && <Film className={`shrink-0 ${compact ? "w-3 h-3" : "w-4 h-4"}`} aria-label="Video" />}
         <p className={`font-semibold truncate ${compact ? "text-[10px]" : "text-xs"}`}>{post.title}</p>
       </div>
       {when && <p className="text-[10px] text-white/90">{when}</p>}
