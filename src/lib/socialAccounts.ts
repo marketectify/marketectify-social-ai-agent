@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { FunctionsHttpError, type SupabaseClient } from "@supabase/supabase-js";
 import { AIError, readFunctionError } from "./ai";
 import type { Platform } from "../types";
 
@@ -72,6 +72,77 @@ export async function refreshYouTube(client: SupabaseClient): Promise<void> {
   if (error) throw await readFunctionError(error);
 }
 
+// ---------------------------------------------------------------------------
+// Facebook + Instagram (Meta)
+// ---------------------------------------------------------------------------
+
+async function metaError(error: unknown): Promise<AIError> {
+  if (error instanceof FunctionsHttpError) {
+    try {
+      const body = await error.context.json();
+      const e = body?.error;
+      if (e && typeof e.message === "string") return new AIError(String(e.code ?? "error"), e.message);
+    } catch {
+      /* fall through */
+    }
+    return new AIError("error", "The server returned an unexpected answer. Please try again.");
+  }
+  return new AIError("network", "Could not reach the server. Check your internet connection and try again.");
+}
+
+/** Asks the server for the Facebook login address (one login connects the Page and its Instagram account). */
+export async function startMetaConnect(client: SupabaseClient): Promise<string> {
+  const { data, error } = await client.functions.invoke("meta-auth", { body: {}, timeout: 30_000 });
+  if (error) throw await metaError(error);
+  const url = (data as { url?: unknown } | null)?.url;
+  if (typeof url !== "string" || !url.startsWith("https://www.facebook.com/")) {
+    throw new AIError("error", "Unexpected answer from the server. Please try again.");
+  }
+  return url;
+}
+
+export interface PublishOutcome {
+  platform: "facebook" | "instagram";
+  ok: boolean;
+  message?: string;
+}
+
+/** Publishes an approved post to its Facebook / Instagram platforms right now. */
+export async function publishPostNow(client: SupabaseClient, postId: string): Promise<{ outcomes: PublishOutcome[]; published: boolean }> {
+  const { data, error } = await client.functions.invoke("meta-api", { body: { action: "publish", postId }, timeout: 120_000 });
+  if (error) throw await metaError(error);
+  const d = data as { outcomes?: unknown; published?: unknown } | null;
+  return { outcomes: Array.isArray(d?.outcomes) ? (d!.outcomes as PublishOutcome[]) : [], published: d?.published === true };
+}
+
+/** Pulls new comments from Facebook and Instagram into the Inbox. */
+export async function syncMetaComments(client: SupabaseClient): Promise<{ imported: number; problems: string[] }> {
+  const { data, error } = await client.functions.invoke("meta-api", { body: { action: "sync" }, timeout: 60_000 });
+  if (error) throw await metaError(error);
+  const d = data as { imported?: unknown; problems?: unknown } | null;
+  return {
+    imported: typeof d?.imported === "number" ? d.imported : 0,
+    problems: Array.isArray(d?.problems) ? d!.problems.filter((x): x is string => typeof x === "string") : [],
+  };
+}
+
+/** Sends a reply to a comment on Facebook / Instagram and marks the message as replied. */
+export async function replyOnPlatform(client: SupabaseClient, messageId: string, text: string): Promise<void> {
+  const { error } = await client.functions.invoke("meta-api", { body: { action: "reply", messageId, text }, timeout: 30_000 });
+  if (error) throw await metaError(error);
+}
+
+const META_ERRORS: Record<string, string> = {
+  denied: "You cancelled the Facebook connection.",
+  bad_state: "The connection link expired. Please press Connect again.",
+  token_failed: "Facebook did not accept the sign-in. Press Connect and try again.",
+  pages_failed: "Facebook did not let the app read your Pages. When Facebook asks, choose your Pages and allow every permission.",
+  no_page: "No Facebook Page was found. Create a Page (or choose your Page in the Facebook window) and connect again.",
+  meta_unreachable: "Could not reach Facebook. Please try again.",
+  save_failed: "Connected, but saving failed. Has the 0011_meta.sql database setup been run?",
+  not_configured: "Facebook and Instagram are not set up on the server yet (missing Meta secrets).",
+};
+
 const CONNECT_ERRORS: Record<string, string> = {
   denied: "You cancelled the YouTube connection.",
   bad_state: "The connection link expired. Please press Connect again.",
@@ -83,7 +154,8 @@ const CONNECT_ERRORS: Record<string, string> = {
   not_configured: "YouTube is not set up on the server yet (missing Google secrets).",
 };
 
-export function connectErrorMessage(code: string): string {
+export function connectErrorMessage(code: string, provider: "youtube" | "meta" = "youtube"): string {
+  if (provider === "meta") return META_ERRORS[code] ?? "Could not connect Facebook. Please try again.";
   return CONNECT_ERRORS[code] ?? "Could not connect YouTube. Please try again.";
 }
 

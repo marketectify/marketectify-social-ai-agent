@@ -33,6 +33,30 @@ function readAsDataUrl(file: Blob): Promise<string> {
   });
 }
 
+/**
+ * Instagram only accepts JPEG pictures, and the Design Studio makes PNG. So pictures are turned into JPEG before they are
+ * stored (on a white background, so see-through parts do not turn black). If the browser cannot do it, the original is kept.
+ */
+export async function toJpeg(file: Blob, quality = 0.92): Promise<Blob> {
+  if (!file.type.startsWith("image/") || file.type === "image/jpeg") return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close?.();
+    const jpeg = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    return jpeg && jpeg.size > 0 ? jpeg : file;
+  } catch {
+    return file;
+  }
+}
+
 /** Demo mode: the picture becomes a data address stored with the post in this browser. */
 export function createLocalMediaStore(): MediaStore {
   return {
@@ -57,7 +81,8 @@ export function pathFromPublicUrl(url: string): string | null {
 /** Real mode: files go to the public bucket `post-media`, in a folder named after the workspace. */
 export function createSupabaseMediaStore(client: SupabaseClient, workspaceId: string): MediaStore {
   return {
-    async upload(file, kind) {
+    async upload(original, kind) {
+      const file = kind === "image" ? await toJpeg(original) : original;
       if (file.size > MEDIA_MAX_BYTES * (kind === "video" ? 8 : 1)) throw new Error("The file is too large.");
       const type = file.type || (kind === "video" ? "video/mp4" : "image/jpeg");
       const path = `${workspaceId}/${newName()}.${extensionFor(type)}`;

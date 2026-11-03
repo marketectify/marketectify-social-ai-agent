@@ -1,0 +1,39 @@
+name: Publish due posts (Facebook and Instagram)
+
+# Every 5 minutes this asks the meta-cron function to publish approved posts whose time has come
+# and to import new comments into the Inbox. Needs two GitHub secrets (see docs/SETUP.md, step 12):
+#   META_CRON_SECRET   the same text as the CRON_SECRET secret in Supabase
+#   VITE_SUPABASE_URL  already set for the site build
+# Without them this workflow skips itself and stays green.
+# GitHub may delay scheduled runs by a few minutes, so a post can go out a little after its time.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: meta-cron
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      CRON_SECRET: ${{ secrets.META_CRON_SECRET }}
+      SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+    steps:
+      - name: Call meta-cron
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$SUPABASE_URL" ]; then
+            echo "META_CRON_SECRET / VITE_SUPABASE_URL not set. Skipping."
+            exit 0
+          fi
+          code=$(curl -sS -o /tmp/out.json -w "%{http_code}" --max-time 150 -X POST \
+            -H "x-cron-secret: $CRON_SECRET" "${SUPABASE_URL%/}/functions/v1/meta-cron" || echo "000")
+          echo "meta-cron answered $code"
+          cat /tmp/out.json 2>/dev/null || true
+          # 503 means Facebook/Instagram is not set up yet: not an error worth a red mark.
+          if [ "$code" != "200" ] && [ "$code" != "503" ]; then exit 1; fi

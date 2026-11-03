@@ -48,18 +48,27 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
   const social = useSocialAccounts();
   const { reload: reloadAccounts, refresh: refreshAccounts } = social;
 
-  // Google sends the browser back with ?connected=youtube or ?connect_error=... . Show the result and tidy the address.
+  // Google or Facebook sends the browser back with ?connected=youtube|meta or ?connect_error=... . Show the result and tidy the address.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const connected = params.get("connected");
     const problem = params.get("connect_error");
     if (!connected && !problem) return;
     window.history.replaceState(null, "", window.location.pathname);
+    const provider = params.get("p") === "meta" ? "meta" : "youtube";
     if (problem) {
-      toast.error(connectErrorMessage(problem));
+      toast.error(connectErrorMessage(problem, provider));
       return;
     }
-    toast.success("YouTube connected");
+    if (connected === "meta") {
+      toast.success(
+        params.get("ig") === "1"
+          ? "Facebook and Instagram connected"
+          : "Facebook connected. No Instagram account was found: link an Instagram Business account to your Page, then connect again.",
+      );
+    } else {
+      toast.success("YouTube connected");
+    }
     void reloadAccounts();
   }, [toast, reloadAccounts]);
 

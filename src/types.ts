@@ -35,6 +35,10 @@ export interface Post {
   scheduledAt: string | null;
   /** Optional picture or video that goes with the post. */
   media?: PostMedia | null;
+  /** Why the last automatic publish failed (Facebook / Instagram), or null. */
+  publishError?: string | null;
+  /** The platform's own id of each published copy, for example { facebook: "123_456" }. */
+  externalIds?: Partial<Record<Platform, string>>;
 }
 
 export type PostInput = Omit<Post, "id">;
@@ -58,6 +62,8 @@ export interface Message {
   repliedAt: string | null;
   /** The person looks like a potential customer. Counted in Analytics. */
   isLead: boolean;
+  /** The platform's own id of this comment. Set for comments imported from Facebook or Instagram. */
+  externalId?: string | null;
 }
 
 export type MessageInput = Omit<Message, "id" | "status" | "reply" | "repliedAt" | "isLead"> &

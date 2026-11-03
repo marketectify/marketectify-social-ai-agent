@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createLocalMediaStore, createSupabaseMediaStore, pathFromPublicUrl, MEDIA_MAX_BYTES } from "./mediaStore";
+import { createLocalMediaStore, createSupabaseMediaStore, pathFromPublicUrl, toJpeg, MEDIA_MAX_BYTES } from "./mediaStore";
 
 function fakeClient(uploadError: { message: string } | null = null) {
   const calls = { upload: [] as { path: string; type?: string }[], remove: [] as string[][] };
@@ -69,5 +69,18 @@ describe("createLocalMediaStore", () => {
     const spy = vi.fn();
     await createLocalMediaStore().remove("x");
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("toJpeg", () => {
+  it("leaves JPEG, videos and non-images alone", async () => {
+    for (const type of ["image/jpeg", "video/mp4", "text/plain"]) {
+      const f = new Blob(["x"], { type });
+      expect(await toJpeg(f)).toBe(f);
+    }
+  });
+  it("keeps the original when the browser cannot convert (no canvas here)", async () => {
+    const png = new Blob(["x"], { type: "image/png" });
+    expect(await toJpeg(png)).toBe(png);
   });
 });

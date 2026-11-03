@@ -187,7 +187,9 @@ export default function TopNav({ onMenuClick, theme, onToggleTheme }: TopNavProp
                     {account.displayName}
                   </span>
                   {account.subscribers !== null && (
-                    <span className="text-[10px] text-slate-500">{formatCount(account.subscribers)} subs</span>
+                    <span className="text-[10px] text-slate-500">
+                      {formatCount(account.subscribers)} {p === "youtube" ? "subs" : "followers"}
+                    </span>
                   )}
                   {confirmId === account.id ? (
                     <>

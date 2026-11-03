@@ -132,9 +132,16 @@ interface MessageRow {
   received_at: string;
   replied_at: string | null;
   is_lead: boolean | null;
+  external_id?: string | null;
 }
 
-const COLUMNS = "id,platform,kind,sender_name,sender_handle,body,status,reply,received_at,replied_at,is_lead";
+const BASE_COLUMNS = "id,platform,kind,sender_name,sender_handle,body,status,reply,received_at,replied_at,is_lead";
+/** external_id comes from 0011_meta.sql. Until that file is run the app falls back to BASE_COLUMNS. */
+const COLUMNS = `${BASE_COLUMNS},external_id`;
+
+function isMissingColumn(error: { message?: string; code?: string } | null): boolean {
+  return Boolean(error) && (error!.code === "42703" || /external_id|does not exist/i.test(error!.message ?? ""));
+}
 
 function fromRow(r: MessageRow): Message {
   return {
@@ -149,41 +156,56 @@ function fromRow(r: MessageRow): Message {
     receivedAt: r.received_at,
     repliedAt: r.replied_at,
     isLead: r.is_lead === true,
+    externalId: typeof r.external_id === "string" && r.external_id ? r.external_id : null,
   };
 }
 
 export function createSupabaseMessagesRepo(client: SupabaseClient, workspaceId: string): MessagesRepo {
+  let extra = true;
+  const cols = () => (extra ? COLUMNS : BASE_COLUMNS);
+  /** Runs a query; if it fails only because 0011 was not run yet, runs it again without external_id. */
+  async function attempt<T>(run: () => PromiseLike<{ data: T | null; error: { message: string; code?: string } | null }>): Promise<T> {
+    let res = await run();
+    if (res.error && extra && isMissingColumn(res.error)) {
+      extra = false;
+      res = await run();
+    }
+    if (res.error) throw new Error(res.error.message);
+    return res.data as T;
+  }
   return {
     async list() {
-      const { data, error } = await client
-        .from("messages")
-        .select(COLUMNS)
-        .eq("workspace_id", workspaceId)
-        .order("received_at", { ascending: false })
-        .limit(1000);
-      if (error) throw new Error(error.message);
-      return (data as MessageRow[]).map(fromRow);
+      const data = await attempt(() =>
+        client
+          .from("messages")
+          .select(cols())
+          .eq("workspace_id", workspaceId)
+          .order("received_at", { ascending: false })
+          .limit(1000),
+      );
+      return (data as unknown as MessageRow[]).map(fromRow);
     },
     async create(input) {
-      const { data, error } = await client
-        .from("messages")
-        .insert({
-          workspace_id: workspaceId,
-          platform: input.platform,
-          kind: input.kind,
-          sender_name: input.senderName,
-          sender_handle: input.senderHandle,
-          body: input.body,
-          status: input.status ?? "unread",
-          reply: input.reply ?? null,
-          received_at: input.receivedAt,
-          replied_at: input.repliedAt ?? null,
-          is_lead: input.isLead ?? false,
-        })
-        .select(COLUMNS)
-        .single();
-      if (error) throw new Error(error.message);
-      return fromRow(data as MessageRow);
+      const data = await attempt(() =>
+        client
+          .from("messages")
+          .insert({
+            workspace_id: workspaceId,
+            platform: input.platform,
+            kind: input.kind,
+            sender_name: input.senderName,
+            sender_handle: input.senderHandle,
+            body: input.body,
+            status: input.status ?? "unread",
+            reply: input.reply ?? null,
+            received_at: input.receivedAt,
+            replied_at: input.repliedAt ?? null,
+            is_lead: input.isLead ?? false,
+          })
+          .select(cols())
+          .single(),
+      );
+      return fromRow(data as unknown as MessageRow);
     },
     async update(id, patch) {
       const row: Record<string, unknown> = {};
@@ -191,15 +213,10 @@ export function createSupabaseMessagesRepo(client: SupabaseClient, workspaceId: 
       if (patch.reply !== undefined) row.reply = patch.reply;
       if (patch.repliedAt !== undefined) row.replied_at = patch.repliedAt;
       if (patch.isLead !== undefined) row.is_lead = patch.isLead;
-      const { data, error } = await client
-        .from("messages")
-        .update(row)
-        .eq("id", id)
-        .eq("workspace_id", workspaceId)
-        .select(COLUMNS)
-        .single();
-      if (error) throw new Error(error.message);
-      return fromRow(data as MessageRow);
+      const data = await attempt(() =>
+        client.from("messages").update(row).eq("id", id).eq("workspace_id", workspaceId).select(cols()).single(),
+      );
+      return fromRow(data as unknown as MessageRow);
     },
     async remove(id) {
       const { error } = await client.from("messages").delete().eq("id", id).eq("workspace_id", workspaceId);
