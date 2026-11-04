@@ -15,10 +15,10 @@ export const META_SCOPES = [
 
 export type MetaPlatform = "facebook" | "instagram";
 /** Platforms this publisher sends posts to by itself. */
-export type AutoPlatform = MetaPlatform | "linkedin";
-const AUTO: AutoPlatform[] = ["facebook", "instagram", "linkedin"];
+export type AutoPlatform = MetaPlatform | "linkedin" | "gbp";
+const AUTO: AutoPlatform[] = ["facebook", "instagram", "linkedin", "gbp"];
 const isAuto = (p: string): p is AutoPlatform => (AUTO as string[]).includes(p);
-const NAMES: Record<AutoPlatform, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn" };
+const NAMES: Record<AutoPlatform, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn", gbp: "Google Business" };
 
 export interface MetaAccountRow {
   platform: AutoPlatform;
@@ -32,6 +32,8 @@ export interface MetaAccountRow {
   token: string;
   /** When the login stops working (LinkedIn: 60 days). Null/absent: it does not expire. */
   expiresAt?: string | null;
+  /** Google Business: long-lived login used to get a fresh access token for every post. */
+  refreshToken?: string | null;
 }
 
 export interface PostRow {
@@ -87,6 +89,8 @@ export interface MetaDeps {
   /** Sends the post to LinkedIn (see linkedin.ts). */
   /** Waits (used while Instagram processes a video). Tests pass an instant one. */
   sleep: (ms: number) => Promise<void>;
+  /** Sends the post to Google Business Profile (see gbp.ts). */
+  publishGbp: (post: PostRow, account: MetaAccountRow) => Promise<{ ok: boolean; id?: string; message?: string }>;
   publishLinkedIn: (post: PostRow, account: MetaAccountRow) => Promise<{ ok: boolean; id?: string; message?: string }>;
   loadPost: (workspaceId: string, postId: string) => Promise<PostRow | null>;
   /** Marks the post as "being published". False when another run already holds it (so nothing is posted twice). */
@@ -262,6 +266,10 @@ export async function publishToPlatform(post: PostRow, platform: AutoPlatform, d
   if (!account) return { platform, ok: false, message: `${NAMES[platform]} is not connected.` };
   const caption = buildCaption(post);
   try {
+    if (platform === "gbp") {
+      const r = await deps.publishGbp(post, account);
+      return r.ok && r.id ? { platform, ok: true, id: r.id } : { platform, ok: false, message: r.message ?? "Google did not accept the post." };
+    }
     if (platform === "linkedin") {
       const r = await deps.publishLinkedIn(post, account);
       return r.ok && r.id ? { platform, ok: true, id: r.id } : { platform, ok: false, message: r.message ?? "LinkedIn did not accept the post." };
@@ -495,7 +503,7 @@ export async function handleApi(req: Request, deps: MetaDeps): Promise<Response>
     if (post.status === "published") return fail(409, "already_published", "This post is already marked as published.");
     if (post.status !== "approved") return fail(409, "not_approved", "Approve the post first. Only approved posts are published.");
     if (!post.platforms.some(isAuto)) {
-      return fail(400, "no_meta_platform", "This post has no Facebook, Instagram or LinkedIn platform.");
+      return fail(400, "no_meta_platform", "This post has no Facebook, Instagram, LinkedIn or Google Business platform.");
     }
     if (!(await deps.claimPost(post.id).catch(() => false))) return fail(409, "busy", "This post is being published right now. Wait a moment and reload.");
     try {

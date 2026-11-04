@@ -14,7 +14,7 @@ const INFO: Record<Platform, { does: string; note?: string }> = {
   linkedin: { does: "Posts and scheduling on your personal LinkedIn profile.", note: "The login lasts about 60 days; connect again when it expires. Company Pages need extra approval from LinkedIn." },
   youtube: { does: "Channel numbers in the dashboard.", note: "Uploading videos needs a Google audit. For now, post videos by hand." },
   tiktok: { does: "Not available yet.", note: "TikTok needs approval for apps. Post by hand and mark it as published." },
-  gbp: { does: "Google Business Profile posts. Coming soon.", note: "Google must approve Business Profile API access first." },
+  gbp: { does: "\"What's new\" posts on your Google Business Profile (picture and text, no video).", note: "Connects the first location of your Google account. Google must approve Business Profile API access for your project first." },
 };
 
 export default function Accounts() {

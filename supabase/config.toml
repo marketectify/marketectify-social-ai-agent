@@ -45,3 +45,10 @@ verify_jwt = false
 
 [functions.linkedin-callback]
 verify_jwt = false
+
+# Google Business Profile. gbp-auth checks the login itself; gbp-callback is opened by Google.
+[functions.gbp-auth]
+verify_jwt = false
+
+[functions.gbp-callback]
+verify_jwt = false

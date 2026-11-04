@@ -73,6 +73,7 @@ function make(over: Partial<MetaDeps> = {}, replies: Record<string, GraphResult>
     loadAccount: async (_ws, platform) => ({ platform, externalId: platform === "facebook" ? "P1" : "IG1", displayName: "Acme", handle: platform === "instagram" ? "@acme" : "", avatarUrl: "", followers: 1, mediaCount: 0, token: "PT" }),
     loadPost: async () => post(),
     sleep: async () => {},
+    publishGbp: async () => ({ ok: true, id: "accounts/1/locations/2/localPosts/3" }),
     publishLinkedIn: async () => ({ ok: true, id: "urn:li:share:77" }),
     claimPost: async (id) => (claimed.has(id) ? false : (claimed.add(id), true)),
     releasePost: async (id) => void (claimed.delete(id), released.push(id)),
@@ -251,6 +252,19 @@ describe("publishPost", () => {
     const none = make({ loadAccount: async () => null });
     await publishPost(post({ platforms: ["linkedin"] }), none.d);
     expect(none.marks[0].error).toMatch(/LinkedIn is not connected/);
+  });
+  it("sends Google Business posts through the Google publisher", async () => {
+    const ok = make();
+    const r = await publishPost(post({ platforms: ["gbp"], mediaUrl: null }), ok.d);
+    expect(r.allDone).toBe(true);
+    expect(ok.calls).toHaveLength(0);
+    expect(ok.marks[0]).toMatchObject({ externalIds: { gbp: "accounts/1/locations/2/localPosts/3" }, published: true });
+    const bad = make({ publishGbp: async () => ({ ok: false, message: "Google refused." }) });
+    await publishPost(post({ platforms: ["gbp"], mediaUrl: null }), bad.d);
+    expect(bad.marks[0].error).toBe("gbp: Google refused.");
+    const none = make({ loadAccount: async () => null });
+    await publishPost(post({ platforms: ["gbp"] }), none.d);
+    expect(none.marks[0].error).toMatch(/Google Business is not connected/);
   });
   it("does not call it published while TikTok or YouTube is still left to do by hand", async () => {
     const { d, marks } = make();

@@ -57,7 +57,7 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
     if (!connected && !problem) return;
     window.history.replaceState(null, "", window.location.pathname);
     const p = params.get("p");
-    const provider = p === "meta" ? "meta" : p === "linkedin" ? "linkedin" : "youtube";
+    const provider = p === "meta" ? "meta" : p === "linkedin" ? "linkedin" : p === "gbp" ? "gbp" : "youtube";
     if (problem) {
       toast.error(connectErrorMessage(problem, provider));
       return;
@@ -68,6 +68,8 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
           ? "Facebook and Instagram connected"
           : "Facebook connected. No Instagram account was found: link an Instagram Business account to your Page, then connect again.",
       );
+    } else if (connected === "gbp") {
+      toast.success("Google Business connected");
     } else if (connected === "linkedin") {
       toast.success("LinkedIn connected");
     } else {

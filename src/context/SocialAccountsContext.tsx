@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 import { AIError } from "../lib/ai";
-import { listAccounts, refreshYouTube, removeAccount, startLinkedInConnect, startMetaConnect, startYouTubeConnect, type SocialAccount } from "../lib/socialAccounts";
+import { listAccounts, refreshYouTube, removeAccount, startGbpConnect, startLinkedInConnect, startMetaConnect, startYouTubeConnect, type SocialAccount } from "../lib/socialAccounts";
 import type { Platform } from "../types";
 
 interface Value {
@@ -53,6 +53,10 @@ export function SocialAccountsProvider({ children }: { children: ReactNode }) {
       window.location.assign(await startMetaConnect(supabase));
       return;
     }
+    if (platform === "gbp") {
+      window.location.assign(await startGbpConnect(supabase));
+      return;
+    }
     if (platform === "linkedin") {
       window.location.assign(await startLinkedInConnect(supabase));
       return;
@@ -84,7 +88,7 @@ export function SocialAccountsProvider({ children }: { children: ReactNode }) {
     () => ({
       accounts,
       loading,
-      connectable: mode === "supabase" ? ["youtube", "facebook", "instagram", "linkedin"] : [],
+      connectable: mode === "supabase" ? ["youtube", "facebook", "instagram", "linkedin", "gbp"] : [],
       get: (p) => accounts.find((a) => a.platform === p),
       connect,
       disconnect,

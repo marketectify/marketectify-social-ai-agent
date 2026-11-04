@@ -113,8 +113,19 @@ export async function startLinkedInConnect(client: SupabaseClient): Promise<stri
   return url;
 }
 
+/** Asks the server for the Google sign-in address for Google Business Profile. */
+export async function startGbpConnect(client: SupabaseClient): Promise<string> {
+  const { data, error } = await client.functions.invoke("gbp-auth", { body: {}, timeout: 30_000 });
+  if (error) throw await metaError(error);
+  const url = (data as { url?: unknown } | null)?.url;
+  if (typeof url !== "string" || !url.startsWith("https://accounts.google.com/")) {
+    throw new AIError("error", "Unexpected answer from the server. Please try again.");
+  }
+  return url;
+}
+
 export interface PublishOutcome {
-  platform: "facebook" | "instagram" | "linkedin";
+  platform: "facebook" | "instagram" | "linkedin" | "gbp";
   ok: boolean;
   message?: string;
 }
@@ -166,6 +177,17 @@ const CONNECT_ERRORS: Record<string, string> = {
   not_configured: "YouTube is not set up on the server yet (missing Google secrets).",
 };
 
+const GBP_ERRORS: Record<string, string> = {
+  denied: "You cancelled the Google Business connection.",
+  bad_state: "The connection link expired. Please press Connect again.",
+  token_failed: "Google did not accept the sign-in. Press Connect and try again.",
+  api_access: "Google refused access to Business Profile. Your Google Cloud project needs approved Business Profile API access (see docs/SETUP.md, step 14).",
+  no_location: "No business location was found for this Google account. Use the Google account that manages your Business Profile.",
+  google_unreachable: "Could not reach Google. Please try again.",
+  save_failed: "Connected, but saving failed. Has the 0012_more_platforms.sql database setup been run?",
+  not_configured: "Google Business is not set up on the server yet (missing Google secrets).",
+};
+
 const LINKEDIN_ERRORS: Record<string, string> = {
   denied: "You cancelled the LinkedIn connection.",
   bad_state: "The connection link expired. Please press Connect again.",
@@ -176,7 +198,8 @@ const LINKEDIN_ERRORS: Record<string, string> = {
   not_configured: "LinkedIn is not set up on the server yet (missing LinkedIn secrets).",
 };
 
-export function connectErrorMessage(code: string, provider: "youtube" | "meta" | "linkedin" = "youtube"): string {
+export function connectErrorMessage(code: string, provider: "youtube" | "meta" | "linkedin" | "gbp" = "youtube"): string {
+  if (provider === "gbp") return GBP_ERRORS[code] ?? "Could not connect Google Business. Please try again.";
   if (provider === "linkedin") return LINKEDIN_ERRORS[code] ?? "Could not connect LinkedIn. Please try again.";
   if (provider === "meta") return META_ERRORS[code] ?? "Could not connect Facebook. Please try again.";
   return CONNECT_ERRORS[code] ?? "Could not connect YouTube. Please try again.";

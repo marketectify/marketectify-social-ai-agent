@@ -270,6 +270,19 @@ You can attach an **MP4 video** (up to 50 MB) to a post. Facebook publishes it a
 
 Supabase's free plan accepts files up to 50 MB. On a paid plan raise "Global file size limit" in Storage settings and the limit of the `post-media` bucket if you need bigger videos.
 
+## 14. Connect Google Business Profile
+
+Posts "What's new" updates (text and one picture, no video, no hashtags) to **one location** of your Business Profile. It uses the same Google Cloud project and OAuth client as YouTube. **It only works after Google approves your project for the Business Profile APIs.**
+
+1. Ask Google for access: open https://developers.google.com/my-business/content/prereqs and follow "Request access" (the Business Profile API access form). Use your Google Cloud project number. Approval can take several days. You need a Business Profile that is verified and at least 60 days old.
+2. After approval, in Google Cloud -> APIs & Services -> Library enable: **My Business Account Management API**, **My Business Business Information API** and **Google My Business API**.
+3. OAuth consent screen -> add the scope `https://www.googleapis.com/auth/business.manage` and make sure your Google account is a test user (or the app is published).
+4. Credentials -> your OAuth client -> add this Authorized redirect URI: `https://wdgkekjqxodhvrfedeyc.supabase.co/functions/v1/gbp-callback`
+5. The secrets are the same as YouTube (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `OAUTH_STATE_SECRET`). Run the **Deploy functions** workflow in GitHub Actions.
+6. Run `0012_more_platforms.sql` if you have not yet. In the dashboard open **Accounts** -> **Connect Google Business** and use the Google account that manages the profile.
+
+Notes: the first location of the account is connected. If Google says "access refused" while connecting, the API approval is not finished yet.
+
 ## Design Studio
 
 Open **Design Studio**, drag a heading, paragraph, box, circle or picture onto the canvas (or drop a picture file

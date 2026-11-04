@@ -10,6 +10,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { GRAPH_VERSION, type MetaDeps, type MetaAccountRow, type PostRow } from "./meta.ts";
 import { publishToLinkedIn } from "./linkedin.ts";
+import { publishToGbp } from "./gbp.ts";
+import { gbpClientId, gbpClientSecret, gbpHttp } from "./gbp_deps.ts";
 import { liFetchMedia, liHttp, linkedInVersion } from "./linkedin_deps.ts";
 
 const env = (name: string) => Deno.env.get(name) ?? "";
@@ -124,7 +126,7 @@ export function makeMetaDeps(): MetaDeps {
     async loadAccount(workspaceId, platform) {
       const { data, error } = await admin()
         .from("social_accounts")
-        .select("platform,external_id,display_name,handle,avatar_url,subscribers,video_count,access_token,token_expires_at")
+        .select("platform,external_id,display_name,handle,avatar_url,subscribers,video_count,access_token,token_expires_at,refresh_token")
         .eq("workspace_id", workspaceId)
         .eq("platform", platform)
         .maybeSingle();
@@ -140,6 +142,7 @@ export function makeMetaDeps(): MetaDeps {
         mediaCount: Number(data.video_count) || 0,
         token: data.access_token,
         expiresAt: data.token_expires_at ?? null,
+        refreshToken: data.refresh_token ?? null,
       };
       return row;
     },
@@ -169,6 +172,14 @@ export function makeMetaDeps(): MetaDeps {
     },
 
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+
+    async publishGbp(post, account) {
+      return publishToGbp(
+        { caption: post.caption, mediaUrl: post.mediaUrl, mediaKind: post.mediaKind },
+        { externalId: account.externalId, refreshToken: account.refreshToken ?? "" },
+        { http: gbpHttp, clientId: gbpClientId(), clientSecret: gbpClientSecret() },
+      );
+    },
 
     async publishLinkedIn(post, account) {
       return publishToLinkedIn(
@@ -234,7 +245,7 @@ export function makeMetaDeps(): MetaDeps {
         .eq("status", "approved")
         .is("publish_error", null)
         .lte("scheduled_at", nowIso)
-        .overlaps("platforms", ["facebook", "instagram", "linkedin"])
+        .overlaps("platforms", ["facebook", "instagram", "linkedin", "gbp"])
         .order("scheduled_at", { ascending: true })
         .limit(limit);
       if (error) throw new Error(error.message);
