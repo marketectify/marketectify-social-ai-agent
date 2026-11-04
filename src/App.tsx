@@ -7,6 +7,7 @@ import Overview from "./components/Overview";
 import Studio from "./components/Studio";
 import Designer from "./components/Designer";
 import HelpAssistant from "./components/HelpAssistant";
+import Accounts from "./components/Accounts";
 import PlanPage from "./components/PlanPage";
 import AdminPage from "./components/AdminPage";
 import Calendar from "./components/Calendar";
@@ -48,18 +49,32 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
   const social = useSocialAccounts();
   const { reload: reloadAccounts, refresh: refreshAccounts } = social;
 
-  // Google sends the browser back with ?connected=youtube or ?connect_error=... . Show the result and tidy the address.
+  // Google or Facebook sends the browser back with ?connected=youtube|meta or ?connect_error=... . Show the result and tidy the address.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const connected = params.get("connected");
     const problem = params.get("connect_error");
     if (!connected && !problem) return;
     window.history.replaceState(null, "", window.location.pathname);
+    const p = params.get("p");
+    const provider = p === "meta" ? "meta" : p === "linkedin" ? "linkedin" : p === "gbp" ? "gbp" : "youtube";
     if (problem) {
-      toast.error(connectErrorMessage(problem));
+      toast.error(connectErrorMessage(problem, provider));
       return;
     }
-    toast.success("YouTube connected");
+    if (connected === "meta") {
+      toast.success(
+        params.get("ig") === "1"
+          ? "Facebook and Instagram connected"
+          : "Facebook connected. No Instagram account was found: link an Instagram Business account to your Page, then connect again.",
+      );
+    } else if (connected === "gbp") {
+      toast.success("Google Business connected");
+    } else if (connected === "linkedin") {
+      toast.success("LinkedIn connected");
+    } else {
+      toast.success("YouTube connected");
+    }
     void reloadAccounts();
   }, [toast, reloadAccounts]);
 
@@ -106,6 +121,7 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
           {activeTab === "calendar" && <Calendar />}
           {activeTab === "inbox" && <Inbox />}
           {activeTab === "analytics" && <Analytics />}
+          {activeTab === "accounts" && <Accounts />}
           {activeTab === "plan" && <PlanPage />}
           {activeTab === "admin" && <AdminPage />}
         </main>

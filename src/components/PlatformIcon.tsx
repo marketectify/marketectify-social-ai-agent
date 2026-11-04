@@ -1,4 +1,4 @@
-import { Facebook, Instagram, Youtube } from "lucide-react";
+import { Facebook, Instagram, Linkedin, Store, Youtube } from "lucide-react";
 import type { Platform } from "../types";
 
 export type IconType = React.ComponentType<{ className?: string }>;
@@ -14,6 +14,8 @@ export function TikTokIcon({ className }: { className?: string }) {
 export const platformIcons: Record<Platform, IconType> = {
   facebook: Facebook,
   instagram: Instagram,
+  linkedin: Linkedin,
   tiktok: TikTokIcon,
   youtube: Youtube,
+  gbp: Store,
 };

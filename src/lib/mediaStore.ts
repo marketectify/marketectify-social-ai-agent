@@ -2,8 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PostMedia } from "../types";
 
 export const MEDIA_BUCKET = "post-media";
-/** Largest file accepted for a post picture (videos get their own limit later). */
+/** Largest file accepted for a post picture. */
 export const MEDIA_MAX_BYTES = 8 * 1024 * 1024;
+/** Largest video. Supabase's free plan allows 50 MB per file; a paid plan can raise it (also in the bucket settings). */
+export const VIDEO_MAX_BYTES = 50 * 1024 * 1024;
 
 /** Where post pictures are kept. Two implementations: browser (demo) and Supabase Storage. */
 export interface MediaStore {
@@ -33,6 +35,30 @@ function readAsDataUrl(file: Blob): Promise<string> {
   });
 }
 
+/**
+ * Instagram only accepts JPEG pictures, and the Design Studio makes PNG. So pictures are turned into JPEG before they are
+ * stored (on a white background, so see-through parts do not turn black). If the browser cannot do it, the original is kept.
+ */
+export async function toJpeg(file: Blob, quality = 0.92): Promise<Blob> {
+  if (!file.type.startsWith("image/") || file.type === "image/jpeg") return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close?.();
+    const jpeg = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+    return jpeg && jpeg.size > 0 ? jpeg : file;
+  } catch {
+    return file;
+  }
+}
+
 /** Demo mode: the picture becomes a data address stored with the post in this browser. */
 export function createLocalMediaStore(): MediaStore {
   return {
@@ -57,16 +83,18 @@ export function pathFromPublicUrl(url: string): string | null {
 /** Real mode: files go to the public bucket `post-media`, in a folder named after the workspace. */
 export function createSupabaseMediaStore(client: SupabaseClient, workspaceId: string): MediaStore {
   return {
-    async upload(file, kind) {
-      if (file.size > MEDIA_MAX_BYTES * (kind === "video" ? 8 : 1)) throw new Error("The file is too large.");
+    async upload(original, kind) {
+      const file = kind === "image" ? await toJpeg(original) : original;
+      if (kind === "video" && file.size > VIDEO_MAX_BYTES) throw new Error("The video is too large. The limit is 50 MB.");
+      if (kind === "image" && file.size > MEDIA_MAX_BYTES) throw new Error("The picture is too large. The limit is 8 MB.");
       const type = file.type || (kind === "video" ? "video/mp4" : "image/jpeg");
       const path = `${workspaceId}/${newName()}.${extensionFor(type)}`;
       const { error } = await client.storage.from(MEDIA_BUCKET).upload(path, file, { contentType: type, upsert: false, cacheControl: "31536000" });
       if (error) {
         throw new Error(
           /bucket not found/i.test(error.message)
-            ? "Picture storage is not set up yet. Run the 0008 SQL file (see docs/SETUP.md)."
-            : `Could not upload the picture: ${error.message}`,
+            ? "File storage is not set up yet. Run the 0008 SQL file (see docs/SETUP.md)."
+            : `Could not upload the file: ${error.message}`,
         );
       }
       const { data } = client.storage.from(MEDIA_BUCKET).getPublicUrl(path);

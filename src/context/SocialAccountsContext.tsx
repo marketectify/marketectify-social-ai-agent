@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 import { AIError } from "../lib/ai";
-import { listAccounts, refreshYouTube, removeAccount, startYouTubeConnect, type SocialAccount } from "../lib/socialAccounts";
+import { listAccounts, refreshYouTube, removeAccount, startGbpConnect, startLinkedInConnect, startMetaConnect, startYouTubeConnect, type SocialAccount } from "../lib/socialAccounts";
 import type { Platform } from "../types";
 
 interface Value {
@@ -44,8 +44,24 @@ export function SocialAccountsProvider({ children }: { children: ReactNode }) {
 
   const connect = useCallback(async (platform: Platform) => {
     if (!supabase) throw new AIError("demo_mode", "Connecting accounts needs a signed-in account (not available in demo mode).");
-    if (platform !== "youtube") throw new AIError("not_available", "This platform is not available yet.");
-    window.location.assign(await startYouTubeConnect(supabase));
+    if (platform === "youtube") {
+      window.location.assign(await startYouTubeConnect(supabase));
+      return;
+    }
+    if (platform === "facebook" || platform === "instagram") {
+      // One Facebook login connects the Page and the Instagram account linked to it.
+      window.location.assign(await startMetaConnect(supabase));
+      return;
+    }
+    if (platform === "gbp") {
+      window.location.assign(await startGbpConnect(supabase));
+      return;
+    }
+    if (platform === "linkedin") {
+      window.location.assign(await startLinkedInConnect(supabase));
+      return;
+    }
+    throw new AIError("not_available", "This platform is not available yet.");
   }, []);
 
   const disconnect = useCallback(
@@ -72,7 +88,7 @@ export function SocialAccountsProvider({ children }: { children: ReactNode }) {
     () => ({
       accounts,
       loading,
-      connectable: mode === "supabase" ? ["youtube"] : [],
+      connectable: mode === "supabase" ? ["youtube", "facebook", "instagram", "linkedin", "gbp"] : [],
       get: (p) => accounts.find((a) => a.platform === p),
       connect,
       disconnect,

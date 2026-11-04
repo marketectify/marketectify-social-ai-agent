@@ -9,7 +9,9 @@ import {
   Info,
   Loader2,
   Plus,
+  RefreshCw,
   Search,
+  Send,
   Trash2,
   X,
 } from "lucide-react";
@@ -18,19 +20,24 @@ import { platformLabels } from "../data";
 import { platformIcons } from "./PlatformIcon";
 import { useAuth } from "../context/AuthContext";
 import { useMessages } from "../context/MessagesContext";
+import { useSocialAccounts } from "../context/SocialAccountsContext";
+import { supabase } from "../lib/supabase";
+import { replyOnPlatform, syncMetaComments } from "../lib/socialAccounts";
 import { useToast } from "../context/ToastContext";
 import { MESSAGE_LIMITS } from "../lib/messagesRepo";
 import { timeAgo } from "../lib/dates";
 import { AIError, LANGUAGES, TONES, generate, type ReplyResult } from "../lib/ai";
 import { loadAutoDraft, pickForDrafting, pruneDrafts, saveAutoDraft, type AutoDraftState } from "../lib/autoDraft";
 
-const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok", "youtube"];
+const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok", "youtube", "gbp"];
 
 const platformColor: Record<Platform, string> = {
   facebook: "text-blue-600 dark:text-blue-400",
   instagram: "text-pink-600 dark:text-pink-400",
+  linkedin: "text-sky-700 dark:text-sky-300",
   tiktok: "text-cyan-700 dark:text-cyan-300",
   youtube: "text-red-600 dark:text-red-400",
+  gbp: "text-emerald-700 dark:text-emerald-300",
 };
 
 const AVATARS = ["bg-blue-600", "bg-sky-700", "bg-indigo-600", "bg-pink-600", "bg-cyan-700", "bg-emerald-700"];
@@ -119,6 +126,34 @@ export default function Inbox() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auto.enabled, demo, loading, messages]);
 
+  // Facebook / Instagram: comments are pulled into the Inbox, and replies are sent back to the platform.
+  const social = useSocialAccounts();
+  const metaConnected = Boolean(social.get("facebook") || social.get("instagram"));
+  const [syncing, setSyncing] = useState(false);
+  const syncedOnce = useRef(false);
+
+  const syncNow = async (quiet = false) => {
+    if (!supabase || syncing) return;
+    setSyncing(true);
+    try {
+      const { imported, problems } = await syncMetaComments(supabase);
+      if (imported > 0) await reload();
+      if (problems.length > 0) toast.error(problems[0]);
+      else if (!quiet || imported > 0) toast.success(imported > 0 ? `${imported} new comment${imported === 1 ? "" : "s"}` : "No new comments");
+    } catch (e) {
+      if (!quiet) toast.error(e instanceof Error ? e.message : "Could not check for new comments.");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!metaConnected || demo || loading || syncedOnce.current) return;
+    syncedOnce.current = true; // once per visit; the scheduler also imports comments every 5 minutes
+    void syncNow(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [metaConnected, demo, loading]);
+
   const unreadCount = messages.filter((m) => m.status === "unread").length;
 
   const visible = useMemo(() => {
@@ -152,16 +187,28 @@ export default function Inbox() {
             Customer comments and DMs with AI reply drafts · {unreadCount} unread
           </p>
         </div>
-        <button
-          onClick={() => {
-            setAdding(true);
-            setSelectedId(null);
-          }}
-          className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Add message
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {metaConnected && !demo && (
+            <button
+              onClick={() => void syncNow()}
+              disabled={syncing}
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-slate-200 text-sm font-semibold text-slate-800 hover:bg-slate-100 disabled:opacity-60 transition-colors"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} aria-hidden="true" />
+              Check for new comments
+            </button>
+          )}
+          <button
+            onClick={() => {
+              setAdding(true);
+              setSelectedId(null);
+            }}
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-blue-600 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add message
+          </button>
+        </div>
       </div>
 
       <div className="glass rounded-xl p-3 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -198,11 +245,21 @@ export default function Inbox() {
 
       <div role="status" className="flex gap-2 items-start text-xs text-slate-700 bg-blue-500/10 border border-blue-500/20 rounded-xl p-3">
         <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
-        <p>
-          Facebook, Instagram, TikTok and YouTube are not connected yet, so messages do not arrive here by themselves.
-          Paste a comment or DM with <strong className="font-semibold">Add message</strong>, let the AI draft the reply,
-          copy it, post it on the platform, then mark it as replied.
-        </p>
+        {metaConnected ? (
+          <p>
+            Comments on your connected Facebook Page and Instagram account arrive here by themselves (checked every 5 minutes, or press{" "}
+            <strong className="font-semibold">Check for new comments</strong>). Let the AI draft the reply, then{" "}
+            <strong className="font-semibold">send it</strong> straight to the comment. TikTok and YouTube messages are not connected: paste
+            them with <strong className="font-semibold">Add message</strong>.
+          </p>
+        ) : (
+          <p>
+            Facebook, Instagram, TikTok and YouTube are not connected yet, so messages do not arrive here by themselves.
+            Paste a comment or DM with <strong className="font-semibold">Add message</strong>, let the AI draft the reply,
+            copy it, post it on the platform, then mark it as replied. To receive comments automatically, press{" "}
+            <strong className="font-semibold">Connect</strong> next to Facebook in the top bar.
+          </p>
+        )}
       </div>
 
       {error && (
@@ -342,6 +399,15 @@ export default function Inbox() {
               message={selected}
               suggestion={auto.drafts[selected.id] ?? ""}
               demo={mode === "demo"}
+              canSendToPlatform={Boolean(
+                supabase && selected.externalId && (selected.platform === "facebook" || selected.platform === "instagram") && social.get(selected.platform),
+              )}
+              onSendToPlatform={async (reply) => {
+                if (!supabase) return;
+                await replyOnPlatform(supabase, selected.id, reply);
+                await reload();
+                toast.success(`Reply sent on ${platformLabels[selected.platform]}`);
+              }}
               onMarkReplied={async (reply) => {
                 await updateMessage(selected.id, { status: "replied", reply, repliedAt: new Date().toISOString() });
                 toast.success("Marked as replied");
@@ -376,6 +442,8 @@ function Conversation({
   message,
   suggestion,
   demo,
+  canSendToPlatform,
+  onSendToPlatform,
   onMarkReplied,
   onMarkUnreplied,
   onToggleLead,
@@ -385,6 +453,9 @@ function Conversation({
   /** A reply the AI wrote earlier (auto-draft). Used when the box is still empty. */
   suggestion: string;
   demo: boolean;
+  /** True for a Facebook / Instagram comment whose platform is connected: the reply can be sent from here. */
+  canSendToPlatform: boolean;
+  onSendToPlatform: (reply: string) => Promise<void>;
   onMarkReplied: (reply: string) => Promise<void>;
   onMarkUnreplied: () => Promise<void>;
   onToggleLead: () => Promise<void>;
@@ -592,7 +663,9 @@ function Conversation({
         />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-[11px] text-slate-500">
-            Copy the reply, post it on {platformLabels[message.platform]}, then mark it as replied.
+            {canSendToPlatform && !replied
+              ? `Send posts your reply under this comment on ${platformLabels[message.platform]}.`
+              : `Copy the reply, post it on ${platformLabels[message.platform]}, then mark it as replied.`}
           </p>
           <div className="flex gap-2">
             <button onClick={copy} disabled={!draft.trim()} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-slate-200/70 text-xs font-medium text-slate-700 hover:bg-slate-100/60 disabled:opacity-40">
@@ -603,10 +676,24 @@ function Conversation({
                 Mark as not replied
               </button>
             ) : null}
+            {canSendToPlatform && !replied && (
+              <button
+                onClick={() => wrap(() => onSendToPlatform(draft.trim()))}
+                disabled={!draft.trim() || busy}
+                className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-emerald-700 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                Send on {platformLabels[message.platform]}
+              </button>
+            )}
             <button
               onClick={() => wrap(() => onMarkReplied(draft.trim()))}
               disabled={!draft.trim() || busy}
-              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-blue-600 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed ${
+                canSendToPlatform && !replied
+                  ? "border border-slate-200/70 text-slate-700 hover:bg-slate-100/60"
+                  : "bg-blue-600 text-white hover:bg-blue-700"
+              }`}
             >
               {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
               {replied ? "Update reply" : "Mark as replied"}

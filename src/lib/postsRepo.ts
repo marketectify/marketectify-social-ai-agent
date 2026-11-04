@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { ALL_PLATFORMS } from "./platforms";
 import type { Platform, Post, PostInput, PostMedia, PostStatus } from "../types";
 import { demoPosts } from "./demoData";
 
@@ -10,7 +11,7 @@ export interface PostsRepo {
   remove(id: string): Promise<void>;
 }
 
-const PLATFORMS: Platform[] = ["facebook", "instagram", "tiktok", "youtube"];
+const PLATFORMS: Platform[] = ALL_PLATFORMS;
 const STATUSES: PostStatus[] = ["draft", "pending", "approved", "published"];
 
 export function newId(): string {
@@ -115,9 +116,27 @@ interface PostRow {
   scheduled_at: string | null;
   media_url?: string | null;
   media_kind?: string | null;
+  publish_error?: string | null;
+  external_ids?: Record<string, unknown> | null;
 }
 
-const COLUMNS = "id,title,caption,hashtags,platforms,status,scheduled_at,media_url,media_kind";
+const BASE_COLUMNS = "id,title,caption,hashtags,platforms,status,scheduled_at,media_url,media_kind";
+/** Columns added by 0011_meta.sql. Until that file is run the app falls back to BASE_COLUMNS. */
+const COLUMNS = `${BASE_COLUMNS},publish_error,external_ids`;
+
+/** True when the database says one of the 0011 columns does not exist yet. */
+export function isMissingMetaColumn(error: { message?: string; code?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "42703" || /publish_error|external_ids|does not exist/i.test(error.message ?? "");
+}
+
+function idsFromRow(raw: Record<string, unknown> | null | undefined): Post["externalIds"] {
+  const out: Partial<Record<Platform, string>> = {};
+  if (raw && typeof raw === "object") {
+    for (const p of PLATFORMS) if (typeof raw[p] === "string" && raw[p]) out[p] = raw[p] as string;
+  }
+  return out;
+}
 
 function mediaFromRow(row: PostRow): PostMedia | null {
   if (!row.media_url) return null;
@@ -136,6 +155,8 @@ function fromRow(row: PostRow): Post {
     status: STATUSES.includes(row.status as PostStatus) ? (row.status as PostStatus) : "draft",
     scheduledAt: row.scheduled_at,
     media: mediaFromRow(row),
+    publishError: typeof row.publish_error === "string" && row.publish_error ? row.publish_error : null,
+    externalIds: idsFromRow(row.external_ids),
   };
 }
 
@@ -155,36 +176,42 @@ function toRow(patch: Partial<PostInput>) {
 }
 
 export function createSupabasePostsRepo(client: SupabaseClient, workspaceId: string): PostsRepo {
+  // Becomes false the first time the database answers that the 0011 columns are missing.
+  let extra = true;
+  const cols = () => (extra ? COLUMNS : BASE_COLUMNS);
+  /** Runs a query; if it fails only because 0011 was not run yet, runs it again without those columns. */
+  async function attempt<T>(run: () => PromiseLike<{ data: T | null; error: { message: string; code?: string } | null }>): Promise<T> {
+    let res = await run();
+    if (res.error && extra && isMissingMetaColumn(res.error)) {
+      extra = false;
+      res = await run();
+    }
+    if (res.error) throw new Error(res.error.message);
+    return res.data as T;
+  }
   return {
     async list() {
-      const { data, error } = await client
-        .from("posts")
-        .select(COLUMNS)
-        .eq("workspace_id", workspaceId)
-        .order("scheduled_at", { ascending: true, nullsFirst: false })
-        .limit(2000);
-      if (error) throw new Error(error.message);
-      return (data as PostRow[]).map(fromRow);
+      const data = await attempt(() =>
+        client
+          .from("posts")
+          .select(cols())
+          .eq("workspace_id", workspaceId)
+          .order("scheduled_at", { ascending: true, nullsFirst: false })
+          .limit(2000),
+      );
+      return (data as unknown as PostRow[]).map(fromRow);
     },
     async create(input) {
-      const { data, error } = await client
-        .from("posts")
-        .insert({ ...toRow(input), workspace_id: workspaceId })
-        .select(COLUMNS)
-        .single();
-      if (error) throw new Error(error.message);
-      return fromRow(data as PostRow);
+      const data = await attempt(() =>
+        client.from("posts").insert({ ...toRow(input), workspace_id: workspaceId }).select(cols()).single(),
+      );
+      return fromRow(data as unknown as PostRow);
     },
     async update(id, patch) {
-      const { data, error } = await client
-        .from("posts")
-        .update(toRow(patch))
-        .eq("id", id)
-        .eq("workspace_id", workspaceId)
-        .select(COLUMNS)
-        .single();
-      if (error) throw new Error(error.message);
-      return fromRow(data as PostRow);
+      const data = await attempt(() =>
+        client.from("posts").update(toRow(patch)).eq("id", id).eq("workspace_id", workspaceId).select(cols()).single(),
+      );
+      return fromRow(data as unknown as PostRow);
     },
     async remove(id) {
       const { error } = await client

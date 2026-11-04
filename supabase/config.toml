@@ -23,3 +23,32 @@ verify_jwt = false
 
 [functions.generate-image]
 verify_jwt = false
+
+# Facebook + Instagram. meta-auth and meta-api check the login themselves (auth.getUser).
+[functions.meta-auth]
+verify_jwt = false
+
+[functions.meta-api]
+verify_jwt = false
+
+# Meta sends the browser here without a login header; the signed "state" value proves it is genuine.
+[functions.meta-callback]
+verify_jwt = false
+
+# Called by the scheduler with the x-cron-secret header.
+[functions.meta-cron]
+verify_jwt = false
+
+# LinkedIn. linkedin-auth checks the login itself; linkedin-callback is opened by LinkedIn.
+[functions.linkedin-auth]
+verify_jwt = false
+
+[functions.linkedin-callback]
+verify_jwt = false
+
+# Google Business Profile. gbp-auth checks the login itself; gbp-callback is opened by Google.
+[functions.gbp-auth]
+verify_jwt = false
+
+[functions.gbp-callback]
+verify_jwt = false

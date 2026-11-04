@@ -17,7 +17,7 @@ interface TopNavProps {
   onToggleTheme: () => void;
 }
 
-const platforms: Platform[] = ["facebook", "instagram", "tiktok", "youtube"];
+const platforms: Platform[] = ["facebook", "instagram", "linkedin", "tiktok", "youtube"];
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -187,7 +187,9 @@ export default function TopNav({ onMenuClick, theme, onToggleTheme }: TopNavProp
                     {account.displayName}
                   </span>
                   {account.subscribers !== null && (
-                    <span className="text-[10px] text-slate-500">{formatCount(account.subscribers)} subs</span>
+                    <span className="text-[10px] text-slate-500">
+                      {formatCount(account.subscribers)} {p === "youtube" ? "subs" : "followers"}
+                    </span>
                   )}
                   {confirmId === account.id ? (
                     <>

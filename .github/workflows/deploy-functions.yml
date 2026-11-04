@@ -43,9 +43,9 @@ jobs:
       - name: Deploy generate-image
         if: steps.check.outputs.ready == 'true'
         run: supabase functions deploy generate-image --project-ref "$SUPABASE_PROJECT_REF"
-      - name: Deploy YouTube functions
+      - name: Deploy YouTube and Meta functions
         if: steps.check.outputs.ready == 'true'
         run: |
-          for fn in youtube-auth youtube-callback youtube-refresh; do
+          for fn in youtube-auth youtube-callback youtube-refresh meta-auth meta-callback meta-api meta-cron linkedin-auth linkedin-callback gbp-auth gbp-callback; do
             supabase functions deploy "$fn" --project-ref "$SUPABASE_PROJECT_REF"
           done

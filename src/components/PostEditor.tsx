@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertCircle, Check, Clock, Copy, Download, ImagePlus, Loader2, Trash2, X } from "lucide-react";
+import { AlertCircle, Check, Clock, Copy, Download, ImagePlus, Video, Loader2, Send, Trash2, X } from "lucide-react";
 import type { Platform, Post, PostInput, PostMedia, PostStatus } from "../types";
 import { platformLabels } from "../data";
 import { platformIcons } from "./PlatformIcon";
 import { usePosts } from "../context/PostsContext";
+import { useSocialAccounts } from "../context/SocialAccountsContext";
+import { supabase } from "../lib/supabase";
+import { publishPostNow } from "../lib/socialAccounts";
 import { useToast } from "../context/ToastContext";
 import { statusConfig } from "../lib/status";
 import { fromLocalInputValue, toLocalInputValue } from "../lib/dates";
 import { defaultSchedule } from "../lib/schedule";
 import { parseHashtags } from "../lib/hashtags";
+import { VIDEO_MAX_BYTES } from "../lib/mediaStore";
+import { POST_PLATFORMS, isAutoPublish } from "../lib/platforms";
 
 const CAPTION_LIMIT = 2200;
-const ALL_PLATFORMS = Object.keys(platformLabels) as Platform[];
 
 type Busy = "save" | "pending" | "approve" | "draft" | "delete" | null;
 
@@ -30,7 +34,8 @@ interface PostEditorProps {
 }
 
 export default function PostEditor({ post, defaultDate, initial, onClose }: PostEditorProps) {
-  const { createPost, updatePost, deletePost, uploadMedia, discardMedia } = usePosts();
+  const { createPost, updatePost, deletePost, uploadMedia, discardMedia, reload } = usePosts();
+  const social = useSocialAccounts();
   const toast = useToast();
   const isNew = post === null;
   const status: PostStatus = post?.status ?? "draft";
@@ -73,10 +78,21 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     return () => URL.revokeObjectURL(url);
   }, [pendingFile]);
 
+  const pendingKind: PostMedia["kind"] = pendingFile?.type.startsWith("video/") ? "video" : "image";
+  const shownKind: PostMedia["kind"] = pendingFile ? pendingKind : media?.kind ?? "image";
   const pickFile = (file: File | undefined) => {
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
-      setError("Please choose a PNG, JPG or WebP picture.");
+    const isVideo = file.type === "video/mp4";
+    if (!isVideo && !/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+      setError("Please choose a PNG, JPG or WebP picture, or an MP4 video.");
+      return;
+    }
+    if (isVideo && !supabase) {
+      setError("Videos need a signed-in account (not available in demo mode).");
+      return;
+    }
+    if (isVideo && file.size > VIDEO_MAX_BYTES) {
+      setError("This video is larger than 50 MB. Compress it (for example 1080p, H.264) and try again.");
       return;
     }
     setError(null);
@@ -91,6 +107,9 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     if (!title.trim()) return "Please give the post a title.";
     if (target === "pending" || target === "approved") {
       if (platforms.length === 0) return "Choose at least one platform.";
+      if (shownKind === "video" && (pendingFile || media) && platforms.includes("linkedin")) {
+        return "LinkedIn video posts are not supported yet. Remove LinkedIn or use a picture.";
+      }
       const when = fromLocalInputValue(schedule);
       if (!when) return "Pick a date and time.";
       if (target === "approved" && new Date(when).getTime() <= Date.now()) {
@@ -111,7 +130,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     setBusy(kind);
     let uploaded: PostMedia | null = null;
     try {
-      if (pendingFile) uploaded = await uploadMedia(pendingFile, "image");
+      if (pendingFile) uploaded = await uploadMedia(pendingFile, pendingKind);
       const input: PostInput = {
         title: title.trim(),
         caption: caption.trim(),
@@ -135,6 +154,49 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save. Please try again.");
       setBusy(null);
+    }
+  };
+
+  // Facebook, Instagram and LinkedIn posts are sent by the server at the scheduled time (or right now with "Publish now").
+  const metaTargets = platforms.filter(isAutoPublish);
+  const metaMissing = metaTargets.filter((p) => !social.get(p));
+  const manualTargets = platforms.filter((p) => !isAutoPublish(p));
+  const canPublishNow = Boolean(supabase && post && status === "approved" && metaTargets.length > 0 && metaMissing.length === 0);
+  const [publishing, setPublishing] = useState(false);
+  const unsavedChanges = Boolean(
+    post &&
+      (title.trim() !== post.title ||
+        caption.trim() !== post.caption ||
+        parseHashtags(hashtagText).join(" ") !== parseHashtags(post.hashtags.join(" ")).join(" ") ||
+        [...platforms].sort().join() !== [...post.platforms].sort().join() ||
+        pendingFile !== null ||
+        (media?.url ?? null) !== (post.media?.url ?? null)),
+  );
+
+  const publishNow = async () => {
+    if (!supabase || !post) return;
+    if (unsavedChanges) {
+      setError("You changed this post. Press Save changes first, then Publish now (the server sends the saved version).");
+      return;
+    }
+    setError(null);
+    setPublishing(true);
+    try {
+      const { outcomes, published } = await publishPostNow(supabase, post.id);
+      await reload();
+      const failed = outcomes.filter((o) => !o.ok);
+      if (failed.length > 0) {
+        setError(failed.map((o) => `${platformLabels[o.platform]}: ${o.message ?? "failed"}`).join("\n"));
+      } else if (published) {
+        toast.success("Published.");
+        onClose();
+      } else {
+        toast.success("Sent to your connected accounts. Publish the other platforms by hand, then mark it as published.");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not publish. Please try again.");
+    } finally {
+      setPublishing(false);
     }
   };
 
@@ -271,18 +333,28 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-slate-600 mb-1.5">Picture</p>
+            <p className="text-xs font-semibold text-slate-600 mb-1.5">Picture or video</p>
             {(pendingUrl ?? media?.url) ? (
               <div className="flex items-start gap-3">
-                <img
-                  src={pendingUrl ?? media?.url}
-                  alt="Picture of this post"
-                  className="w-28 h-28 object-cover rounded-xl border border-slate-200 bg-slate-100/50"
-                />
+                {shownKind === "video" ? (
+                  <video
+                    src={pendingUrl ?? media?.url}
+                    controls
+                    preload="metadata"
+                    aria-label="Video of this post"
+                    className="w-40 max-h-56 rounded-xl border border-slate-200 bg-black"
+                  />
+                ) : (
+                  <img
+                    src={pendingUrl ?? media?.url}
+                    alt="Picture of this post"
+                    className="w-28 h-28 object-cover rounded-xl border border-slate-200 bg-slate-100/50"
+                  />
+                )}
                 {!locked && (
                   <div className="flex flex-col gap-2">
                     <button type="button" onClick={() => fileInput.current?.click()} className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100/60">
-                      Change picture
+                      Change file
                     </button>
                     <button
                       type="button"
@@ -292,7 +364,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
                       }}
                       className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-500/10"
                     >
-                      Remove picture
+                      Remove file
                     </button>
                   </div>
                 )}
@@ -304,15 +376,15 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
                 onClick={() => fileInput.current?.click()}
                 className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-slate-300 text-sm text-slate-700 hover:bg-slate-100/50 disabled:opacity-60"
               >
-                <ImagePlus className="w-4 h-4" aria-hidden="true" /> Add a picture
+                <ImagePlus className="w-4 h-4" aria-hidden="true" /> <Video className="w-4 h-4 -ml-1" aria-hidden="true" /> Add a picture or video
               </button>
             )}
             <input
               ref={fileInput}
               type="file"
-              accept="image/png,image/jpeg,image/webp"
+              accept="image/png,image/jpeg,image/webp,video/mp4"
               className="sr-only"
-              aria-label="Choose a picture file"
+              aria-label="Choose a picture or video file"
               onChange={(e) => {
                 pickFile(e.target.files?.[0]);
                 e.target.value = "";
@@ -323,7 +395,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
           <fieldset ref={platformsRef} disabled={locked}>
             <legend className="text-xs font-semibold text-slate-600 mb-1.5">Publish to</legend>
             <div className="grid grid-cols-2 gap-2">
-              {ALL_PLATFORMS.map((p) => {
+              {POST_PLATFORMS.map((p) => {
                 const Icon = platformIcons[p];
                 const selected = platforms.includes(p);
                 return (
@@ -374,18 +446,48 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
               className="flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm border bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400"
             >
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>{error}</span>
+              <span className="whitespace-pre-line">{error}</span>
             </div>
           )}
           {status === "approved" && post && (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-2" data-testid="publish-helper">
               <p className="text-sm font-semibold text-slate-900">
-                {new Date(post.scheduledAt ?? 0).getTime() <= Date.now() ? "Time to post this" : "Ready to post by hand"}
+                {new Date(post.scheduledAt ?? 0).getTime() <= Date.now() ? "Time to post this" : "Approved and scheduled"}
               </p>
-              <p className="text-xs text-slate-700">
-                Direct posting to the platforms is not connected yet. Copy the text, post it in the app, then mark it as published here.
-              </p>
+              {post.publishError && (
+                <p role="alert" className="text-xs text-red-700 dark:text-red-400 whitespace-pre-line">
+                  The last automatic try failed: {post.publishError}
+                </p>
+              )}
+              {metaTargets.length > 0 && metaMissing.length === 0 && (
+                <p className="text-xs text-slate-700">
+                  Facebook / Instagram: sent automatically at the scheduled time (checked every 5 minutes), or press <strong>Publish now</strong>.
+                </p>
+              )}
+              {metaMissing.length > 0 && (
+                <p className="text-xs text-slate-700">
+                  {metaMissing.map((p) => platformLabels[p]).join(" and ")} is not connected. Press <strong>Connect</strong> next to it in the top bar to
+                  publish automatically; until then post by hand.
+                </p>
+              )}
+              {(manualTargets.length > 0 || metaTargets.length === 0 || metaMissing.length > 0) && (
+                <p className="text-xs text-slate-700">
+                  {manualTargets.length > 0 ? `${manualTargets.map((p) => platformLabels[p]).join(" and ")}: ` : ""}
+                  copy the text, post it in the app, then mark it as published here.
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
+                {canPublishNow && (
+                  <button
+                    type="button"
+                    onClick={publishNow}
+                    disabled={anyBusy || publishing}
+                    className="h-9 px-3 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 inline-flex items-center gap-1.5"
+                  >
+                    {publishing ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <Send className="w-4 h-4" aria-hidden="true" />}
+                    Publish now
+                  </button>
+                )}
                 <button type="button" onClick={copyForPosting} className="h-9 px-3 rounded-lg text-sm font-medium border border-slate-200 bg-white/60 hover:bg-slate-100 inline-flex items-center gap-1.5">
                   <Copy className="w-4 h-4" aria-hidden="true" /> Copy caption
                 </button>
@@ -396,7 +498,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
                 )}
                 <button
                   type="button"
-                  disabled={anyBusy}
+                  disabled={anyBusy || publishing}
                   onClick={() => run("save", "published", "Marked as published.")}
                   className="h-9 px-3 rounded-lg text-sm font-semibold bg-emerald-700 text-white hover:bg-emerald-800 disabled:opacity-60 inline-flex items-center gap-1.5"
                 >

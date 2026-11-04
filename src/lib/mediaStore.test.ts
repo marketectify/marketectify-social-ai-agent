@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createLocalMediaStore, createSupabaseMediaStore, pathFromPublicUrl, MEDIA_MAX_BYTES } from "./mediaStore";
+import { createLocalMediaStore, createSupabaseMediaStore, pathFromPublicUrl, toJpeg, MEDIA_MAX_BYTES, VIDEO_MAX_BYTES } from "./mediaStore";
 
 function fakeClient(uploadError: { message: string } | null = null) {
   const calls = { upload: [] as { path: string; type?: string }[], remove: [] as string[][] };
@@ -49,6 +49,14 @@ describe("createSupabaseMediaStore", () => {
     const big = new Blob([new Uint8Array(MEDIA_MAX_BYTES + 1)]);
     await expect(createSupabaseMediaStore(client, "w1").upload(big, "image")).rejects.toThrow(/too large/);
   });
+  it("accepts a video above the picture limit but not above the video limit", async () => {
+    const { client } = fakeClient();
+    const store = createSupabaseMediaStore(client, "w1");
+    const ok = await store.upload(new Blob([new Uint8Array(MEDIA_MAX_BYTES + 1)], { type: "video/mp4" }), "video");
+    expect(ok.kind).toBe("video");
+    const huge = new Blob([new Uint8Array(VIDEO_MAX_BYTES + 1)], { type: "video/mp4" });
+    await expect(store.upload(huge, "video")).rejects.toThrow(/50 MB/);
+  });
   it("only removes files inside its own workspace folder and never throws", async () => {
     const { client, calls } = fakeClient();
     const store = createSupabaseMediaStore(client, "w1");
@@ -69,5 +77,18 @@ describe("createLocalMediaStore", () => {
     const spy = vi.fn();
     await createLocalMediaStore().remove("x");
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+describe("toJpeg", () => {
+  it("leaves JPEG, videos and non-images alone", async () => {
+    for (const type of ["image/jpeg", "video/mp4", "text/plain"]) {
+      const f = new Blob(["x"], { type });
+      expect(await toJpeg(f)).toBe(f);
+    }
+  });
+  it("keeps the original when the browser cannot convert (no canvas here)", async () => {
+    const png = new Blob(["x"], { type: "image/png" });
+    expect(await toJpeg(png)).toBe(png);
   });
 });

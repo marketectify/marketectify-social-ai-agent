@@ -7,6 +7,7 @@ import {
   Zap,
   Palette,
   CreditCard,
+  Plug,
   ShieldCheck,
 } from "lucide-react";
 import type { TabId } from "../types";
@@ -26,6 +27,7 @@ const navItems: { id: TabId; label: string; icon: typeof LayoutDashboard; descri
   { id: "calendar", label: "Calendar & Approvals", icon: CalendarClock, description: "Schedule & approve content" },
   { id: "inbox", label: "Unified Inbox", icon: Inbox, description: "Comments, DMs & AI replies" },
   { id: "analytics", label: "Analytics & Leads", icon: BarChart3, description: "Performance & lead reports" },
+  { id: "accounts", label: "Accounts", icon: Plug, description: "Connect your social accounts" },
   { id: "plan", label: "Plan & Billing", icon: CreditCard, description: "Free or Pro, upgrade" },
 ];
 

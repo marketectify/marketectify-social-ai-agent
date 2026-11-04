@@ -178,6 +178,111 @@ The login tokens are stored in the database but can never be read from the brows
 | "YouTube Data API v3 is not enabled" | Enable it in Google Cloud, Library |
 | "no YouTube channel" | Create a channel on youtube.com with that Google account |
 
+## 12. Connect Facebook and Instagram
+
+After this, the **Connect** buttons next to Facebook and Instagram in the top bar work, approved posts are **published
+automatically** at their time, new comments arrive in the **Inbox**, and you can **send the reply** straight to the comment.
+
+**You need:** a Facebook **Page** you are admin of, and (for Instagram) an Instagram **Business or Creator** account linked to
+that Page. A personal Instagram account cannot be used.
+
+**A. Database.** Supabase, SQL Editor: run `supabase/migrations/0011_meta.sql` (it needs 0003, 0005 and 0008 first).
+
+**B. Meta app** (free) at <https://developers.facebook.com>. Meta changes this dashboard often, so names may differ a little.
+1. Log in with the Facebook account that is admin of the Page. **My Apps, Create app**, name `Marketectify Social`, add your email.
+2. Choose the use cases **Manage everything on your Page** and **Manage messaging and content on Instagram**.
+3. In each use case press **Customize** and add these permissions, then **Ready to test**:
+   `pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `pages_manage_engagement`,
+   `instagram_basic`, `instagram_content_publish`, `instagram_manage_comments`.
+4. **Facebook Login (for Business), Settings**: add this to **Valid OAuth Redirect URIs**:
+   `https://YOUR-PROJECT-REF.supabase.co/functions/v1/meta-callback`
+5. **App settings, Basic**: copy the **App ID** and **App secret** (press Show). Fill in the fields Meta asks for:
+   Privacy Policy URL `https://social-ai.marketectify.com/privacy.html`, Terms of Service URL
+   `https://social-ai.marketectify.com/terms.html`, Data deletion instructions URL
+   `https://social-ai.marketectify.com/data-deletion.html`, an app icon and a category.
+6. Only if your app uses **Facebook Login for Business**: open **Facebook Login for Business, Configurations**, create a
+   configuration with token type **User access token** and the permissions from step 3, and copy its **Configuration ID**.
+7. Leave the app in **Development mode**. In **App roles** make sure you are an Admin. In Development mode the app works for
+   everyone who has a role on it (Admin, Developer, Tester), with no Meta review. Add each other person who should connect
+   as a **Tester** (they must accept the invitation on Facebook).
+
+**C. Supabase secrets** (Edge Functions, Secrets). `OAUTH_STATE_SECRET` and `SITE_URL` are already there from YouTube. Add:
+- `META_APP_ID` and `META_APP_SECRET` (step 5)
+- `CRON_SECRET` = any long random text (30+ characters)
+- `META_LOGIN_CONFIG_ID` = the Configuration ID (only if you did step 6)
+
+**D. Deploy the functions:** GitHub, **Actions, Deploy Supabase functions, Run workflow**. Wait for the green tick.
+
+**E. The 5-minute scheduler.** GitHub, repository **Settings, Secrets and variables, Actions, New repository secret**:
+`META_CRON_SECRET` = exactly the same text as `CRON_SECRET`. The workflow **Publish due posts (Facebook and Instagram)** then
+runs every 5 minutes (GitHub can delay it a few minutes). Test it once: **Actions, that workflow, Run workflow**; the log
+should say `meta-cron answered 200`.
+
+**F. On the site:** Redeploy on Hostinger, press Ctrl+Shift+R, then **Connect** next to Facebook, choose your Page and the
+Instagram account, and allow everything it asks for.
+
+**How it behaves**
+- One Page (the first one that has an Instagram account, otherwise the first Page) is connected per workspace.
+- Approve a post with Facebook and/or Instagram selected. At its time the server publishes it. Open the post to see the
+  result. **Publish now** sends it immediately. If a try fails, the reason is shown on the post and it is **not** retried by
+  itself: fix the cause (for example, add a picture), then press **Publish now**.
+- **Instagram needs a picture** (a text-only post is refused). Pictures you upload are converted to JPEG, which Instagram requires,
+  and Instagram only accepts shapes between 4:5 (tall) and 1.91:1 (wide).
+- A post that also has TikTok or YouTube is not marked published automatically: post those by hand, then press **Mark as published**.
+- Comments: the Inbox checks when you open it and every 5 minutes (the latest 10 posts, 25 comments each). **Auto-draft replies**
+  then writes the first answer. Direct messages (DMs) are not included: Meta requires an extra approval for those.
+- Disconnect in the top bar removes the saved login from the database.
+
+**For other people's Pages (customers):** Development mode only works for people with a role on your app. For the public you need
+**App Review** for each permission and usually **Business Verification** (company documents) in Meta's App Dashboard, plus
+the Privacy Policy and data deletion pages above. This takes days to weeks.
+
+| Message | Fix |
+| --- | --- |
+| "Facebook and Instagram are not set up yet" | `META_APP_ID`, `META_APP_SECRET` or `OAUTH_STATE_SECRET` is missing, or the functions were not redeployed |
+| Facebook says "Feature unavailable" or "Invalid scopes" | The app uses Facebook Login for Business: do step 6 and add `META_LOGIN_CONFIG_ID` |
+| Facebook says "URL blocked" or redirect mismatch | The Valid OAuth Redirect URI (step 4) must match exactly |
+| "No Facebook Page was found" | Create a Page, or tick your Page in the Facebook window, then connect again |
+| Connected, but no Instagram | Link the Instagram Business/Creator account to the Page (Page settings, Linked accounts), then connect again |
+| "Meta refused ... permission" | You are not Admin/Developer/Tester of the Meta app, or a permission was not added (step 3) |
+| "The Facebook login expired" | Press Connect again (this also happens after you change your Facebook password) |
+| Posts stay "approved" | `META_CRON_SECRET` is missing in GitHub, it differs from `CRON_SECRET`, or 0011 was not run |
+
+---
+
+## 13. Connect LinkedIn
+
+Needs your own LinkedIn developer app. Posting to your **personal profile** works right away. **Company Pages** and reading comments need extra approval from LinkedIn and are not included.
+
+1. Run `supabase/migrations/0012_more_platforms.sql` in the Supabase SQL editor (adds LinkedIn and Google Business as platforms).
+2. Go to https://www.linkedin.com/developers/apps and press **Create app**. LinkedIn asks for a Company Page to link; create an empty one if you have none.
+3. Open the app -> **Products** and add **Share on LinkedIn** and **Sign In with LinkedIn using OpenID Connect**.
+4. Open **Auth** and add this redirect URL: `https://wdgkekjqxodhvrfedeyc.supabase.co/functions/v1/linkedin-callback`
+5. Copy **Client ID** and **Client Secret** from the Auth tab. In Supabase -> Edge Functions -> Secrets add `LINKEDIN_CLIENT_ID` and `LINKEDIN_CLIENT_SECRET` (`OAUTH_STATE_SECRET` and `SITE_URL` are the same as for YouTube).
+6. Run the **Deploy functions** workflow in GitHub Actions.
+7. In the dashboard open **Accounts** -> **Connect LinkedIn**.
+
+Notes: the LinkedIn login lasts about 60 days; connect again when the post says it expired. Pictures up to 8 MB are supported; video posts to LinkedIn are not yet. Optional secret `LINKEDIN_API_VERSION` (format YYYYMM) if LinkedIn retires the default version.
+
+### Videos
+
+You can attach an **MP4 video** (up to 50 MB) to a post. Facebook publishes it as a video and Instagram as a **Reel** (Instagram needs 3 to 90 seconds, H.264 video and AAC audio; vertical 9:16 looks best). Instagram can take up to about 100 seconds to process it; if it says "still processing", press **Publish now** again after a minute. LinkedIn video posts are not supported yet, and YouTube/TikTok videos are still posted by hand.
+
+Supabase's free plan accepts files up to 50 MB. On a paid plan raise "Global file size limit" in Storage settings and the limit of the `post-media` bucket if you need bigger videos.
+
+## 14. Connect Google Business Profile
+
+Posts "What's new" updates (text and one picture, no video, no hashtags) to **one location** of your Business Profile. It uses the same Google Cloud project and OAuth client as YouTube. **It only works after Google approves your project for the Business Profile APIs.**
+
+1. Ask Google for access: open https://developers.google.com/my-business/content/prereqs and follow "Request access" (the Business Profile API access form). Use your Google Cloud project number. Approval can take several days. You need a Business Profile that is verified and at least 60 days old.
+2. After approval, in Google Cloud -> APIs & Services -> Library enable: **My Business Account Management API**, **My Business Business Information API** and **Google My Business API**.
+3. OAuth consent screen -> add the scope `https://www.googleapis.com/auth/business.manage` and make sure your Google account is a test user (or the app is published).
+4. Credentials -> your OAuth client -> add this Authorized redirect URI: `https://wdgkekjqxodhvrfedeyc.supabase.co/functions/v1/gbp-callback`
+5. The secrets are the same as YouTube (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `OAUTH_STATE_SECRET`). Run the **Deploy functions** workflow in GitHub Actions.
+6. Run `0012_more_platforms.sql` if you have not yet. In the dashboard open **Accounts** -> **Connect Google Business** and use the Google account that manages the profile.
+
+Notes: the first location of the account is connected. If Google says "access refused" while connecting, the API approval is not finished yet.
+
 ## Design Studio
 
 Open **Design Studio**, drag a heading, paragraph, box, circle or picture onto the canvas (or drop a picture file
@@ -275,9 +380,9 @@ Without `.env.local` the app starts in demo mode.
 | Feature | What you will need |
 | --- | --- |
 | AI reply drafts in the Inbox | The same Gemini key |
-| Publishing to Facebook and Instagram | A Meta developer app, a Facebook Page linked to an Instagram professional account, and Meta app review for the publishing permissions |
+| Facebook and Instagram for other people's Pages | Meta App Review and Business Verification (your own Page already works, see step 12) |
 | Publishing to TikTok | A TikTok developer app and approval for the Content Posting API |
 | Publishing to YouTube | A Google Cloud project with the YouTube Data API v3 and OAuth consent verification |
-| Receiving real DMs and comments automatically, and sending replies | The same developer apps and their webhooks (today messages are added by hand) |
+| Receiving direct messages (DMs), and instant (instead of every 5 minutes) comments | Extra Meta approval for messaging, and Meta webhooks |
 
 The platform approvals can take days or weeks, so it is worth starting those applications early.
