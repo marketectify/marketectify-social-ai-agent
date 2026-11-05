@@ -111,3 +111,8 @@
 select option {
   @apply bg-surface text-slate-900;
 }
+
+/* Room for the black bar at the top (BrandBar). */
+:root { --brand-bar: 1.75rem; }
+#root { padding-top: var(--brand-bar); }
+.min-h-screen { min-height: calc(100vh - var(--brand-bar)); }

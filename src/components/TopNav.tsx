@@ -74,7 +74,7 @@ export default function TopNav({ onMenuClick, theme, onToggleTheme }: TopNavProp
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-30 glass border-b border-slate-200/80">
+    <header className="sticky top-7 z-30 glass border-b border-slate-200/80">
       {/* Main nav row */}
       <div className="flex items-center gap-3 px-4 lg:px-6 h-16">
         <button
