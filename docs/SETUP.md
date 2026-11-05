@@ -363,6 +363,13 @@ If the FTP secrets are missing the step is skipped. Never share the FTP password
 
 ---
 
+## Legal pages (needed for Google and Meta approval)
+
+The site has three public pages that need no login: `/privacy.html`, `/terms.html` and `/data-deletion.html`
+(source: the `public/` folder). Google (OAuth consent screen, Branding) and Meta (App settings, Basic) ask for these
+links, and Meta also asks for the data deletion URL. Check that the contact email at the bottom of each page
+(`marketectify@gmail.com`) is the one you want to publish, and edit the files if not.
+
 ## Local development
 
 ```bash

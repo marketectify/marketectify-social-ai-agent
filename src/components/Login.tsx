@@ -210,6 +210,11 @@ export default function Login({ theme, onToggleTheme }: { theme: Theme; onToggle
           </button>
         )}
       </div>
+      <p className="text-center text-[11px] text-slate-500 mt-4">
+        By continuing you agree to the{" "}
+        <a href="/terms.html" target="_blank" rel="noreferrer" className="underline">Terms</a> and{" "}
+        <a href="/privacy.html" target="_blank" rel="noreferrer" className="underline">Privacy Policy</a>.
+      </p>
     </Shell>
   );
 }
