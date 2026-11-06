@@ -47,7 +47,7 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
       )}
 
       <aside
-        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-72 shrink-0 glass border-r border-slate-200/80 transition-transform duration-300 ${
+        className={`fixed lg:sticky top-7 left-0 z-50 h-[calc(100vh-1.75rem)] w-72 shrink-0 glass border-r border-slate-200/80 transition-transform duration-300 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
