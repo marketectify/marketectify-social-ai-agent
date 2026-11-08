@@ -49,6 +49,7 @@ function make(over: Partial<MetaDeps> = {}, replies: Record<string, GraphResult>
     configured: true,
     siteUrl: "https://site.test/",
     appId: "APP",
+    appToken: "APP|SECRET",
     configId: "",
     stateSecret: SECRET,
     cronSecret: "cron-secret",
@@ -318,6 +319,21 @@ describe("connect flow", () => {
     const url = `https://x.test/cb?code=C&state=${encodeURIComponent(state)}`;
     const noPage = make({}, { "GET me/accounts": { status: 200, body: { data: [] } } });
     expect((await handleCallback(new Request(url), noPage.d)).headers.get("location")).toContain("connect_error=no_page");
+    // The Page is only listed in the token's granted scopes: read it from there.
+    const granted = make(
+      {},
+      {
+        "GET me/accounts": { status: 200, body: { data: [] } },
+        "GET debug_token": { status: 200, body: { data: { granular_scopes: [{ scope: "pages_show_list", target_ids: ["1234567890", "bad id"] }, { scope: "email", target_ids: ["999999999"] }] } } },
+        "GET 1234567890": { status: 200, body: { id: "1234567890", name: "Marketectify", access_token: "PT9" } },
+      },
+    );
+    const ok = await handleCallback(new Request(url), granted.d);
+    expect(ok.headers.get("location")).toContain("connected=meta");
+    expect(granted.saved[0].rows[0]).toMatchObject({ platform: "facebook", externalId: "1234567890", token: "PT9" });
+    const dbg = granted.calls.find((c) => c.path === "debug_token")!;
+    expect(dbg.token).toBe("APP|SECRET");
+    expect(granted.calls.map((c) => c.path)).not.toContain("999999999");
     const badToken = make({}, { "GET oauth/access_token": { status: 400, body: { error: { message: "code SECRET123 used" } } } });
     const r = await handleCallback(new Request(url), badToken.d);
     expect(r.headers.get("location")).toContain("token_failed");
