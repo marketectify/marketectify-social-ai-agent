@@ -76,6 +76,8 @@ export interface MetaDeps {
   appId: string;
   /** "APP_ID|APP_SECRET": lets the server ask Meta which Pages the person allowed. Never logged or sent to the browser. */
   appToken: string;
+  /** Optional: the numeric ID of your Facebook Page (secret META_PAGE_ID). Used when Meta does not list the Page itself. */
+  pageId: string;
   /** Optional Login Configuration id (Facebook Login for Business). Empty = classic login with scopes. */
   configId: string;
   stateSecret: string;
@@ -454,10 +456,17 @@ export async function pagesFromGrants(userToken: string, deps: MetaDeps): Promis
     if (typeof sc?.scope !== "string" || !sc.scope.startsWith("pages_") || !Array.isArray(sc.target_ids)) continue;
     for (const id of sc.target_ids) if (typeof id === "string" && /^\d{5,25}$/.test(id)) ids.add(id);
   }
+  // The Page the site owner named in the META_PAGE_ID secret is always tried.
+  if (/^\d{5,25}$/.test(deps.pageId)) ids.add(deps.pageId);
+  // Diagnostics for the logs: only permission names and counts, never tokens or IDs.
+  const perms = await deps.graph("GET", "me/permissions", {}, userToken);
+  const names = (Array.isArray(perms.body?.data) ? perms.body.data : []).map((p: any) => `${String(p?.permission)}:${String(p?.status)}`).join(",");
+  deps.log?.(`token permissions (${perms.status}): ${names.slice(0, 400) || "none"}; scopes with targets: ${scopes.length}`);
   const data: unknown[] = [];
   for (const id of [...ids].slice(0, 10)) {
     const r = await deps.graph("GET", id, { fields: PAGE_FIELDS }, userToken);
     if (r.status < 400 && r.body && typeof r.body.access_token === "string") data.push(r.body);
+    else deps.log?.(`page lookup by id failed (${r.status}${typeof r.body?.error?.code === "number" ? `, code ${r.body.error.code}` : ""})`);
   }
   deps.log?.(`granted pages: ${ids.size} listed, ${data.length} readable`);
   return { data };

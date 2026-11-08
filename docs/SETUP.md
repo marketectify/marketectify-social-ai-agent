@@ -242,7 +242,7 @@ the Privacy Policy and data deletion pages above. This takes days to weeks.
 | "Facebook and Instagram are not set up yet" | `META_APP_ID`, `META_APP_SECRET` or `OAUTH_STATE_SECRET` is missing, or the functions were not redeployed |
 | Facebook says "Feature unavailable" or "Invalid scopes" | The app uses Facebook Login for Business: do step 6 and add `META_LOGIN_CONFIG_ID` |
 | Facebook says "URL blocked" or redirect mismatch | The Valid OAuth Redirect URI (step 4) must match exactly |
-| "No Facebook Page was found" | Create a Page, or tick your Page in the Facebook window, then connect again |
+| "No Facebook Page was found" | Create a Page, or tick your Page in the Facebook window, then connect again. If Meta still lists no Page (Facebook Login for Business), add the secret `META_PAGE_ID` = the numeric ID of your Page (Page, About, Page transparency, or Meta Business Suite settings) and connect again |
 | Connected, but no Instagram | Link the Instagram Business/Creator account to the Page (Page settings, Linked accounts), then connect again |
 | "Meta refused ... permission" | You are not Admin/Developer/Tester of the Meta app, or a permission was not added (step 3) |
 | "The Facebook login expired" | Press Connect again (this also happens after you change your Facebook password) |
