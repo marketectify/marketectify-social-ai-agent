@@ -1,6 +1,7 @@
 // Deno wiring for the Facebook / Instagram functions (not unit tested: it only connects the tested logic to Meta and Supabase).
 // Secrets (Supabase dashboard -> Edge Functions -> Secrets):
 //   META_APP_ID, META_APP_SECRET   from developers.facebook.com -> your app -> App settings -> Basic
+//   META_PAGE_ID                   optional: numeric ID of your Facebook Page (fallback when Meta does not list it)
 //   META_LOGIN_CONFIG_ID           optional: Configuration ID when the app uses "Facebook Login for Business"
 //   OAUTH_STATE_SECRET             same long random text as for YouTube
 //   SITE_URL                       https://social-ai.marketectify.com
@@ -50,6 +51,7 @@ export function makeMetaDeps(): MetaDeps {
     configured: Boolean(appId && appSecret && stateSecret && supabaseUrl && serviceKey),
     siteUrl,
     appId,
+    pageId: env("META_PAGE_ID").trim(),
     appToken: appId && appSecret ? `${appId}|${appSecret}` : "",
     configId: env("META_LOGIN_CONFIG_ID"),
     stateSecret,

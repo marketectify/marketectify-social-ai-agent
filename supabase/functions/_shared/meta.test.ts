@@ -50,6 +50,7 @@ function make(over: Partial<MetaDeps> = {}, replies: Record<string, GraphResult>
     siteUrl: "https://site.test/",
     appId: "APP",
     appToken: "APP|SECRET",
+    pageId: "",
     configId: "",
     stateSecret: SECRET,
     cronSecret: "cron-secret",
@@ -334,6 +335,20 @@ describe("connect flow", () => {
     const dbg = granted.calls.find((c) => c.path === "debug_token")!;
     expect(dbg.token).toBe("APP|SECRET");
     expect(granted.calls.map((c) => c.path)).not.toContain("999999999");
+    // Meta lists nothing at all: the Page named in META_PAGE_ID is fetched directly.
+    const byId = make(
+      { pageId: "5550001112223" },
+      {
+        "GET me/accounts": { status: 200, body: { data: [] } },
+        "GET debug_token": { status: 200, body: { data: { granular_scopes: [] } } },
+        "GET me/permissions": { status: 200, body: { data: [{ permission: "pages_show_list", status: "granted" }] } },
+        "GET 5550001112223": { status: 200, body: { id: "5550001112223", name: "Marketectify", access_token: "PT7" } },
+      },
+    );
+    expect((await handleCallback(new Request(url), byId.d)).headers.get("location")).toContain("connected=meta");
+    expect(byId.saved[0].rows[0]).toMatchObject({ externalId: "5550001112223", token: "PT7" });
+    expect(byId.logs.join(" ")).toContain("pages_show_list:granted");
+    expect(byId.logs.join(" ")).not.toContain("PT7");
     const badToken = make({}, { "GET oauth/access_token": { status: 400, body: { error: { message: "code SECRET123 used" } } } });
     const r = await handleCallback(new Request(url), badToken.d);
     expect(r.headers.get("location")).toContain("token_failed");
