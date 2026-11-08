@@ -50,6 +50,7 @@ export function makeMetaDeps(): MetaDeps {
     configured: Boolean(appId && appSecret && stateSecret && supabaseUrl && serviceKey),
     siteUrl,
     appId,
+    appToken: appId && appSecret ? `${appId}|${appSecret}` : "",
     configId: env("META_LOGIN_CONFIG_ID"),
     stateSecret,
     cronSecret: env("CRON_SECRET"),

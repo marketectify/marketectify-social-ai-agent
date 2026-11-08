@@ -74,6 +74,8 @@ export interface MetaDeps {
   configured: boolean;
   siteUrl: string;
   appId: string;
+  /** "APP_ID|APP_SECRET": lets the server ask Meta which Pages the person allowed. Never logged or sent to the browser. */
+  appToken: string;
   /** Optional Login Configuration id (Facebook Login for Business). Empty = classic login with scopes. */
   configId: string;
   stateSecret: string;
@@ -438,6 +440,29 @@ export async function handleStart(req: Request, deps: MetaDeps): Promise<Respons
   return json(200, { url: buildAuthUrl({ appId: deps.appId, redirectUri: deps.redirectUri, state, configId: deps.configId }) });
 }
 
+const PAGE_FIELDS = "id,name,access_token,picture{url},followers_count,fan_count,instagram_business_account{id,username,profile_picture_url,followers_count,media_count}";
+
+/**
+ * With Facebook Login for Business, "me/accounts" can come back empty even though the person allowed a Page.
+ * Meta then lists the allowed Pages in the token's granular scopes. Read those and fetch each Page directly.
+ */
+export async function pagesFromGrants(userToken: string, deps: MetaDeps): Promise<{ data: unknown[] }> {
+  const info = await deps.graph("GET", "debug_token", { input_token: userToken }, deps.appToken);
+  const scopes: any[] = Array.isArray(info.body?.data?.granular_scopes) ? info.body.data.granular_scopes : [];
+  const ids = new Set<string>();
+  for (const sc of scopes) {
+    if (typeof sc?.scope !== "string" || !sc.scope.startsWith("pages_") || !Array.isArray(sc.target_ids)) continue;
+    for (const id of sc.target_ids) if (typeof id === "string" && /^\d{5,25}$/.test(id)) ids.add(id);
+  }
+  const data: unknown[] = [];
+  for (const id of [...ids].slice(0, 10)) {
+    const r = await deps.graph("GET", id, { fields: PAGE_FIELDS }, userToken);
+    if (r.status < 400 && r.body && typeof r.body.access_token === "string") data.push(r.body);
+  }
+  deps.log?.(`granted pages: ${ids.size} listed, ${data.length} readable`);
+  return { data };
+}
+
 function back(deps: MetaDeps, query: string): Response {
   const base = deps.siteUrl.replace(/\/+$/, "");
   return new Response(null, { status: 302, headers: { location: `${base}/?${query}`, "cache-control": "no-store" } });
@@ -464,14 +489,18 @@ export async function handleCallback(req: Request, deps: MetaDeps): Promise<Resp
     const pages = await deps.graph(
       "GET",
       "me/accounts",
-      { fields: "id,name,access_token,picture{url},followers_count,fan_count,instagram_business_account{id,username,profile_picture_url,followers_count,media_count}", limit: "25" },
+      { fields: PAGE_FIELDS, limit: "25" },
       userToken,
     );
     if (pages.status >= 400) {
       deps.log?.(`page lookup failed (${pages.status})`);
       return back(deps, "connect_error=pages_failed&p=meta");
     }
-    const rows = parsePages(pages.body);
+    let rows = parsePages(pages.body);
+    if (rows.length === 0) {
+      deps.log?.("me/accounts returned no pages; trying the granted pages");
+      rows = parsePages(await pagesFromGrants(userToken, deps));
+    }
     if (rows.length === 0) return back(deps, "connect_error=no_page&p=meta");
     await deps.saveAccounts(state.ws, rows);
     return back(deps, `connected=meta&ig=${rows.some((r) => r.platform === "instagram") ? "1" : "0"}`);
