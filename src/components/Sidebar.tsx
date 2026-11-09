@@ -8,6 +8,7 @@ import {
   Palette,
   CreditCard,
   Plug,
+  History,
   ShieldCheck,
 } from "lucide-react";
 import type { TabId } from "../types";
@@ -25,6 +26,7 @@ const navItems: { id: TabId; label: string; icon: typeof LayoutDashboard; descri
   { id: "studio", label: "AI Content Studio", icon: Sparkles, description: "Generate captions, reels & visuals" },
   { id: "design", label: "Design Studio", icon: Palette, description: "Drag & drop post designer" },
   { id: "calendar", label: "Calendar & Approvals", icon: CalendarClock, description: "Schedule & approve content" },
+  { id: "history", label: "Post History", icon: History, description: "What went out, when and where" },
   { id: "inbox", label: "Unified Inbox", icon: Inbox, description: "Comments, DMs & AI replies" },
   { id: "analytics", label: "Analytics & Leads", icon: BarChart3, description: "Performance & lead reports" },
   { id: "accounts", label: "Accounts", icon: Plug, description: "Connect your social accounts" },

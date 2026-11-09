@@ -4,6 +4,7 @@ export type TabId =
   | "studio"
   | "design"
   | "calendar"
+  | "history"
   | "inbox"
   | "analytics"
   | "plan"
@@ -36,6 +37,8 @@ export interface Post {
   scheduledAt: string | null;
   /** Optional picture or video that goes with the post. */
   media?: PostMedia | null;
+  /** When the post really went out (ISO timestamp), or null. */
+  publishedAt?: string | null;
   /** Why the last automatic publish failed (Facebook / Instagram), or null. */
   publishError?: string | null;
   /** The platform's own id of each published copy, for example { facebook: "123_456" }. */

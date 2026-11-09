@@ -11,6 +11,7 @@ import Accounts from "./components/Accounts";
 import PlanPage from "./components/PlanPage";
 import AdminPage from "./components/AdminPage";
 import Calendar from "./components/Calendar";
+import PostHistory from "./components/PostHistory";
 import Inbox from "./components/Inbox";
 import Analytics from "./components/Analytics";
 import Login, { SetNewPassword } from "./components/Login";
@@ -125,6 +126,7 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
             />
           </div>
           {activeTab === "calendar" && <Calendar />}
+          {activeTab === "history" && <PostHistory />}
           {activeTab === "inbox" && <Inbox />}
           {activeTab === "analytics" && <Analytics />}
           {activeTab === "accounts" && <Accounts />}

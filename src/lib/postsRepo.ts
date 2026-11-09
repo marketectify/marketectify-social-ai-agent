@@ -117,12 +117,13 @@ interface PostRow {
   media_url?: string | null;
   media_kind?: string | null;
   publish_error?: string | null;
+  published_at?: string | null;
   external_ids?: Record<string, unknown> | null;
 }
 
 const BASE_COLUMNS = "id,title,caption,hashtags,platforms,status,scheduled_at,media_url,media_kind";
 /** Columns added by 0011_meta.sql. Until that file is run the app falls back to BASE_COLUMNS. */
-const COLUMNS = `${BASE_COLUMNS},publish_error,external_ids`;
+const COLUMNS = `${BASE_COLUMNS},publish_error,external_ids,published_at`;
 
 /** True when the database says one of the 0011 columns does not exist yet. */
 export function isMissingMetaColumn(error: { message?: string; code?: string } | null): boolean {
@@ -157,6 +158,7 @@ function fromRow(row: PostRow): Post {
     media: mediaFromRow(row),
     publishError: typeof row.publish_error === "string" && row.publish_error ? row.publish_error : null,
     externalIds: idsFromRow(row.external_ids),
+    publishedAt: typeof row.published_at === "string" && row.published_at ? row.published_at : null,
   };
 }
 
