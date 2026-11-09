@@ -13,6 +13,7 @@ import {
   parsePages,
   publishPost,
   sameText,
+  sendReply,
   syncWorkspaceComments,
   type GraphResult,
   type MetaDeps,
@@ -75,6 +76,9 @@ function make(over: Partial<MetaDeps> = {}, replies: Record<string, GraphResult>
     loadAccount: async (_ws, platform) => ({ platform, externalId: platform === "facebook" ? "P1" : "IG1", displayName: "Acme", handle: platform === "instagram" ? "@acme" : "", avatarUrl: "", followers: 1, mediaCount: 0, token: "PT" }),
     loadPost: async () => post(),
     sleep: async () => {},
+    publishYouTube: async () => ({ ok: true, id: "vid1" }),
+    youtubeComments: async () => ({ ok: true, comments: [] }),
+    youtubeReply: async () => ({ ok: true }),
     publishGbp: async () => ({ ok: true, id: "accounts/1/locations/2/localPosts/3" }),
     publishLinkedIn: async () => ({ ok: true, id: "urn:li:share:77" }),
     claimPost: async (id) => (claimed.has(id) ? false : (claimed.add(id), true)),
@@ -267,6 +271,17 @@ describe("publishPost", () => {
     const none = make({ loadAccount: async () => null });
     await publishPost(post({ platforms: ["gbp"] }), none.d);
     expect(none.marks[0].error).toMatch(/Google Business is not connected/);
+  });
+  it("publishes a video to YouTube through the YouTube publisher", async () => {
+    const MP4 = "https://x.supabase.co/storage/v1/object/public/post-media/w1/v.mp4";
+    const ok = make();
+    const r = await publishPost(post({ platforms: ["youtube"], mediaUrl: MP4, mediaKind: "video" }), ok.d);
+    expect(r.allDone).toBe(true);
+    expect(ok.calls).toHaveLength(0);
+    expect(ok.marks[0]).toMatchObject({ externalIds: { youtube: "vid1" }, published: true });
+    const bad = make({ publishYouTube: async () => ({ ok: false, message: "YouTube needs a video. Add an MP4 to the post." }) });
+    await publishPost(post({ platforms: ["youtube"], mediaUrl: null }), bad.d);
+    expect(bad.marks[0].error).toBe("youtube: YouTube needs a video. Add an MP4 to the post.");
   });
   it("does not call it published while TikTok or YouTube is still left to do by hand", async () => {
     const { d, marks } = make();
@@ -466,6 +481,40 @@ describe("cron", () => {
     expect(body.failed).toBe(1);
     expect(body.published).toBe(1);
     expect(m.released.sort()).toEqual(["a", "b"]);
+  });
+});
+
+describe("YouTube comments in the inbox", () => {
+  it("imports YouTube comments and reports why they could not be read", async () => {
+    const yt = { platform: "youtube", externalId: "Ugx1abc", senderName: "Sara", senderHandle: "Sara", body: "Hi", receivedAt: "2026-11-08T10:00:00.000Z" } as const;
+    const m = make({
+      loadAccount: async (_ws, platform) => (platform === "youtube" ? { platform, externalId: "UCc", displayName: "Ch", handle: "", avatarUrl: "", followers: 1, mediaCount: 0, token: "x" } : null),
+      youtubeComments: async () => ({ ok: true, comments: [yt] }),
+    });
+    expect(await syncWorkspaceComments("w1", m.d)).toEqual({ imported: 1, problems: [] });
+    expect(m.imported[0].comments[0]).toMatchObject({ platform: "youtube", externalId: "Ugx1abc" });
+    const bad = make({
+      loadAccount: async (_ws, platform) => (platform === "youtube" ? { platform, externalId: "UCc", displayName: "Ch", handle: "", avatarUrl: "", followers: 1, mediaCount: 0, token: "x" } : null),
+      youtubeComments: async () => ({ ok: false, message: "Reconnect." }),
+    });
+    expect((await syncWorkspaceComments("w1", bad.d)).problems).toEqual(["YouTube: Reconnect."]);
+  });
+  it("answers a YouTube comment and marks it replied", async () => {
+    let got: any[] = [];
+    const m = make({
+      loadAccount: async (_ws, platform) => ({ platform, externalId: "UCc", displayName: "Ch", handle: "", avatarUrl: "", followers: 1, mediaCount: 0, token: "x" }),
+      youtubeReply: async (_a, parent, text) => { got = [parent, text]; return { ok: true }; },
+    });
+    const msg = { id: "m1", workspaceId: "w1", platform: "youtube", externalId: "Ugx1abc", status: "unread" } as const;
+    expect(await sendReply(msg as any, "Thanks!", m.d)).toEqual({ ok: true });
+    expect(got).toEqual(["Ugx1abc", "Thanks!"]);
+    expect(m.replied).toHaveLength(1);
+    const fail = make({
+      loadAccount: async (_ws, platform) => ({ platform, externalId: "UCc", displayName: "Ch", handle: "", avatarUrl: "", followers: 1, mediaCount: 0, token: "x" }),
+      youtubeReply: async () => ({ ok: false, message: "Comments are turned off for this video." }),
+    });
+    expect(await sendReply(msg as any, "Thanks!", fail.d)).toEqual({ ok: false, message: "Comments are turned off for this video." });
+    expect(fail.replied).toHaveLength(0);
   });
 });
 

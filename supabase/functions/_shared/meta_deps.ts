@@ -11,6 +11,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { GRAPH_VERSION, type MetaDeps, type MetaAccountRow, type PostRow } from "./meta.ts";
 import { publishToLinkedIn } from "./linkedin.ts";
+import { listYouTubeComments, publishToYouTube, replyOnYouTube } from "./youtube_api.ts";
+import { makeYtApiDeps } from "./youtube_api_deps.ts";
 import { publishToGbp } from "./gbp.ts";
 import { gbpClientId, gbpClientSecret, gbpHttp } from "./gbp_deps.ts";
 import { liFetchMedia, liHttp, linkedInVersion } from "./linkedin_deps.ts";
@@ -129,7 +131,7 @@ export function makeMetaDeps(): MetaDeps {
     async loadAccount(workspaceId, platform) {
       const { data, error } = await admin()
         .from("social_accounts")
-        .select("platform,external_id,display_name,handle,avatar_url,subscribers,video_count,access_token,token_expires_at,refresh_token")
+        .select("platform,external_id,display_name,handle,avatar_url,subscribers,video_count,access_token,token_expires_at,refresh_token,scopes")
         .eq("workspace_id", workspaceId)
         .eq("platform", platform)
         .maybeSingle();
@@ -146,6 +148,7 @@ export function makeMetaDeps(): MetaDeps {
         token: data.access_token,
         expiresAt: data.token_expires_at ?? null,
         refreshToken: data.refresh_token ?? null,
+        scopes: data.scopes ?? null,
       };
       return row;
     },
@@ -175,6 +178,23 @@ export function makeMetaDeps(): MetaDeps {
     },
 
     sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+
+    async publishYouTube(post, account) {
+      return publishToYouTube(
+        { caption: post.caption, hashtags: post.hashtags, mediaUrl: post.mediaUrl, mediaKind: post.mediaKind },
+        { externalId: account.externalId, refreshToken: account.refreshToken ?? "", scopes: account.scopes },
+        makeYtApiDeps(),
+      );
+    },
+
+    async youtubeComments(account) {
+      const r = await listYouTubeComments({ externalId: account.externalId, refreshToken: account.refreshToken ?? "", scopes: account.scopes }, makeYtApiDeps());
+      return r.ok ? { ok: true, comments: r.comments.map((c) => ({ ...c, platform: "youtube" as const })) } : r;
+    },
+
+    async youtubeReply(account, parentId, text) {
+      return replyOnYouTube({ externalId: account.externalId, refreshToken: account.refreshToken ?? "", scopes: account.scopes }, parentId, text, makeYtApiDeps());
+    },
 
     async publishGbp(post, account) {
       return publishToGbp(
@@ -248,7 +268,7 @@ export function makeMetaDeps(): MetaDeps {
         .eq("status", "approved")
         .is("publish_error", null)
         .lte("scheduled_at", nowIso)
-        .overlaps("platforms", ["facebook", "instagram", "linkedin", "gbp"])
+        .overlaps("platforms", ["facebook", "instagram", "linkedin", "gbp", "youtube"])
         .order("scheduled_at", { ascending: true })
         .limit(limit);
       if (error) throw new Error(error.message);
@@ -256,7 +276,7 @@ export function makeMetaDeps(): MetaDeps {
     },
 
     async listMetaWorkspaces() {
-      const { data, error } = await admin().from("social_accounts").select("workspace_id").in("platform", ["facebook", "instagram"]);
+      const { data, error } = await admin().from("social_accounts").select("workspace_id").in("platform", ["facebook", "instagram", "youtube"]);
       if (error) throw new Error(error.message);
       return [...new Set((data ?? []).map((r: any) => r.workspace_id as string))];
     },

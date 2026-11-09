@@ -283,6 +283,22 @@ Posts "What's new" updates (text and one picture, no video, no hashtags) to **on
 
 Notes: the first location of the account is connected. If Google says "access refused" while connecting, the API approval is not finished yet.
 
+## 16. YouTube: post videos and answer comments
+
+YouTube was read-only (channel numbers). The app now also **posts videos** and **reads and answers comments**.
+
+1. Run `supabase/migrations/0014_scopes_visible.sql` in the SQL editor (lets the app see which permissions a connection has).
+2. In Google Cloud -> **Google Auth Platform** (OAuth consent screen) -> **Data access** -> **Add or remove scopes**, add `.../auth/youtube.upload` and `.../auth/youtube.force-ssl` (next to `youtube.readonly`). Save.
+3. Merge the PR, then run the **Deploy functions** workflow (the scheduler deploy runs by itself on merge).
+4. In the dashboard open **Accounts**. YouTube shows "Connect again": press it and tick **all** permissions on Google's screen.
+5. Post: pick YouTube and add an MP4 video (up to 50 MB). The first line of the caption is the video title, the rest is the description.
+6. Comments: unanswered comments on your channel reach the Inbox (every 5 minutes, or press the sync button). Answer there; the reply goes to YouTube.
+
+Good to know:
+- **Videos stay private until Google audits your project.** Google forces uploads from unaudited projects to private. You can switch a video to public in YouTube Studio. To lift this, apply for the "YouTube API Services Audit" (search for it in Google's help); it takes some weeks.
+- **Test mode logins expire after 7 days.** While the Google app is "Testing", the connection stops working after a week and you must connect again. In Google Auth Platform -> Audience press **Publish app** (it can stay unverified: Google then shows a warning screen on connect and allows up to 100 users) and the logins no longer expire.
+- Daily limit: Google gives each project 10,000 units a day; an upload costs 1,600, so about 6 videos a day. Replying costs 50.
+
 ## Design Studio
 
 Open **Design Studio**, drag a heading, paragraph, box, circle or picture onto the canvas (or drop a picture file

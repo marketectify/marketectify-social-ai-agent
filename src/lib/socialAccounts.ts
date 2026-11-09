@@ -13,6 +13,14 @@ export interface SocialAccount {
   videoCount: number;
   viewCount: number;
   statsUpdatedAt: string | null;
+  /** Permissions granted at connect time; null when unknown (database setup 0014 not run yet). */
+  scopes: string | null;
+}
+
+/** An old YouTube connection that can only read numbers: it must be connected again to post and answer comments. */
+export function youtubeNeedsReconnect(a: Pick<SocialAccount, "platform" | "scopes">): boolean {
+  if (a.platform !== "youtube" || a.scopes === null) return false;
+  return !a.scopes.includes("youtube.upload") || !a.scopes.includes("youtube.force-ssl");
 }
 
 /** Only harmless columns. The login tokens are never readable from the browser (see 0005_social_accounts.sql). */
@@ -28,6 +36,7 @@ interface Row {
   video_count: number;
   view_count: number;
   stats_updated_at: string | null;
+  scopes?: string | null;
 }
 
 const PLATFORMS: Platform[] = ALL_PLATFORMS;
@@ -43,13 +52,17 @@ export function fromRow(r: Row): SocialAccount {
     videoCount: Number(r.video_count) || 0,
     viewCount: Number(r.view_count) || 0,
     statsUpdatedAt: r.stats_updated_at,
+    scopes: typeof r.scopes === "string" ? r.scopes : null,
   };
 }
 
 export async function listAccounts(client: SupabaseClient, workspaceId: string): Promise<SocialAccount[]> {
+  // "scopes" needs database setup 0014; without it the list still loads (permissions are then unknown).
+  const withScopes = await client.from("social_accounts").select(`${COLUMNS},scopes`).eq("workspace_id", workspaceId);
+  if (!withScopes.error) return (withScopes.data as unknown as Row[]).map(fromRow);
   const { data, error } = await client.from("social_accounts").select(COLUMNS).eq("workspace_id", workspaceId);
   if (error) throw new Error(error.message);
-  return (data as Row[]).map(fromRow);
+  return (data as unknown as Row[]).map(fromRow);
 }
 
 export async function removeAccount(client: SupabaseClient, id: string): Promise<void> {
