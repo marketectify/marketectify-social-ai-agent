@@ -1,14 +1,13 @@
 name: Publish due posts (Facebook and Instagram)
 
-# Every 5 minutes this asks the meta-cron function to publish approved posts whose time has come
+# This asks the meta-cron function to publish approved posts whose time has come
 # and to import new comments into the Inbox. Needs two GitHub secrets (see docs/SETUP.md, step 12):
 #   META_CRON_SECRET   the same text as the CRON_SECRET secret in Supabase
 #   VITE_SUPABASE_URL  already set for the site build
 # Without them this workflow skips itself and stays green.
 # GitHub may delay scheduled runs by a few minutes, so a post can go out a little after its time.
+# The schedule now runs inside Supabase (docs/SETUP.md, step 15). This workflow is only for starting a run by hand.
 on:
-  schedule:
-    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 permissions: {}

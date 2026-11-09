@@ -455,6 +455,15 @@ describe("cron", () => {
     expect(m.marks.map((x) => x.id)).toEqual(["a"]);
     expect(m.released).toEqual(["a"]);
   });
+  it("skips the comment import when the scheduler asks for publishing only", async () => {
+    let listed = 0;
+    const m = make({ listMetaWorkspaces: async () => { listed++; return ["w1"]; }, listDuePosts: async () => [post({ id: "a" })] });
+    const req = new Request("https://x.test/c?comments=skip", { method: "POST", headers: { "x-cron-secret": "cron-secret" } });
+    expect(await (await handleCron(req, m.d)).json()).toEqual({ due: 1, published: 1, failed: 0, imported: 0 });
+    expect(listed).toBe(0);
+    await handleCron(cron("cron-secret"), m.d);
+    expect(listed).toBe(1);
+  });
   it("counts failures and keeps going when one post throws", async () => {
     let n = 0;
     const m = make({
