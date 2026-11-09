@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertCircle,
   Bookmark,
@@ -12,6 +12,7 @@ import {
   Loader2,
   MessageCircle,
   MoreHorizontal,
+  Palette,
   Plus,
   RefreshCw,
   Send,
@@ -24,6 +25,9 @@ import { platformLabels } from "../data";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import PostEditor from "./PostEditor";
+import DesignPicker from "./DesignPicker";
+import { loadDesigns, type SavedDesign } from "../lib/designStore";
+import { designTopic, renderDesignBlob } from "../lib/designRender";
 import {
   AIError,
   LANGUAGES,
@@ -49,7 +53,13 @@ const ENGINES: { kind: Kind; title: string; subtitle: string; icon: typeof Hash;
 
 type Results = Partial<Record<Kind, Generated>>;
 
-export default function Studio() {
+export interface StudioDesignHandoff {
+  /** Id of a design saved in the Design Studio. `nonce` changes on every request so the same design can be sent twice. */
+  id: string;
+  nonce: number;
+}
+
+export default function Studio({ designHandoff }: { designHandoff?: StudioDesignHandoff | null }) {
   const { mode, workspace } = useAuth();
   const toast = useToast();
   const brand = workspace?.name ?? "Your brand";
@@ -66,8 +76,48 @@ export default function Studio() {
   const [errors, setErrors] = useState<Partial<Record<Kind, string>>>({});
   const [usage, setUsage] = useState<{ used: number; limit: number } | null>(null);
   const [selected, setSelected] = useState(0);
-  const [editorInitial, setEditorInitial] = useState<null | { title: string; caption: string; hashtags: string[]; platforms: Platform[] }>(null);
+  const [editorInitial, setEditorInitial] = useState<null | { title: string; caption: string; hashtags: string[]; platforms: Platform[]; mediaFile?: Blob }>(null);
   const busy = useRef(false);
+  const workspaceId = workspace?.id ?? "demo";
+  // A design from the Design Studio: its picture goes into the post and its words tell the AI what the post is about.
+  const [design, setDesign] = useState<SavedDesign | null>(null);
+  const [designs, setDesigns] = useState<SavedDesign[]>([]);
+  const [pickingDesign, setPickingDesign] = useState(false);
+  const [designFile, setDesignFile] = useState<Blob | null>(null);
+  const [designBusy, setDesignBusy] = useState(false);
+  const designThumbUrl = design?.thumb || undefined;
+
+  const readDesigns = () => {
+    try {
+      return loadDesigns(window.localStorage, workspaceId);
+    } catch {
+      return [];
+    }
+  };
+  const chooseDesign = async (d: SavedDesign) => {
+    setPickingDesign(false);
+    setDesign(d);
+    setDesignFile(null);
+    setDesignBusy(true);
+    const suggestion = designTopic(d.name, d.design, LIMITS.topicMax);
+    if (suggestion) setTopic((t) => (t.trim().length >= LIMITS.topicMin ? t : suggestion));
+    try {
+      setDesignFile(await renderDesignBlob(d.design));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not use this design.");
+      setDesign(null);
+    } finally {
+      setDesignBusy(false);
+    }
+  };
+  const handoffNonce = useRef(0);
+  useEffect(() => {
+    if (!designHandoff || designHandoff.nonce === handoffNonce.current) return;
+    handoffNonce.current = designHandoff.nonce;
+    const found = readDesigns().find((d) => d.id === designHandoff.id);
+    if (found) void chooseDesign(found);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [designHandoff]);
 
   const topicOk = topic.trim().length >= LIMITS.topicMin;
   const canGenerate = !demo && topicOk && !loading;
@@ -111,6 +161,7 @@ export default function Studio() {
       caption,
       hashtags,
       platforms: [platform] as Platform[],
+      ...(designFile ? { mediaFile: designFile } : {}),
     });
 
   return (
@@ -137,6 +188,32 @@ export default function Studio() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <div className="space-y-5">
+          <div className="glass rounded-2xl p-5 space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-900 mb-2">Picture from the Design Studio (optional)</p>
+              {design ? (
+                <div className="flex items-center gap-3">
+                  {designThumbUrl ? (
+                    <img src={designThumbUrl} alt="" className="w-16 h-16 rounded-lg object-cover border border-slate-200 bg-slate-100/50" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-lg bg-slate-100/50 border border-slate-200" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-slate-800 truncate">{design.name}</p>
+                    <p className="text-xs text-slate-500">{designBusy ? "Preparing the picture…" : "This picture will be added to your post."}</p>
+                  </div>
+                  <button type="button" onClick={() => { setPickingDesign(false); setDesigns(readDesigns()); setPickingDesign(true); }} className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100/60">Change</button>
+                  <button type="button" onClick={() => { setDesign(null); setDesignFile(null); }} className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-red-700 dark:text-red-300 hover:bg-red-500/10">Remove</button>
+                </div>
+              ) : (
+                <button type="button" onClick={() => { setDesigns(readDesigns()); setPickingDesign(true); }} className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-slate-300 text-sm text-slate-700 hover:bg-slate-100/50">
+                  <Palette className="w-4 h-4" aria-hidden="true" /> Use a design
+                </button>
+              )}
+              <p className="text-xs text-slate-500 mt-1.5">The AI reads the words on your design and writes the caption to match.</p>
+            </div>
+          </div>
+
           <div className="glass rounded-2xl p-5 space-y-4">
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -333,6 +410,7 @@ export default function Studio() {
         </div>
       </div>
 
+      {pickingDesign && <DesignPicker designs={designs} onPick={(d) => void chooseDesign(d)} onClose={() => setPickingDesign(false)} />}
       {editorInitial && <PostEditor post={null} initial={editorInitial} onClose={() => setEditorInitial(null)} />}
     </div>
   );

@@ -4,7 +4,7 @@ import PostEditor from "./PostEditor";
 import AiVideoPanel from "./AiVideoPanel";
 import {
   AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BringToFront, Circle, Copy, Download, FolderOpen, Heading, ImagePlus, Palette,
-  FilePlus2, Redo2, Save, Send, SendToBack, Square, Trash2, Type, Undo2,
+  FilePlus2, Redo2, Save, Send, SendToBack, Sparkles, Square, Trash2, Type, Undo2,
 } from "lucide-react";
 import {
   FONT_LABELS, FONT_STACKS, LIMITS, PRESETS, TEMPLATES, blankDesign, duplicateElement, fitTextHeights, fontString, layoutText,
@@ -40,7 +40,7 @@ type Drag =
   | { mode: "move"; id: string; startX: number; startY: number; origX: number; origY: number; start: Design }
   | { mode: "resize"; id: string; startX: number; startY: number; origW: number; origH: number; start: Design };
 
-export default function Designer() {
+export default function Designer({ onWriteWithAi }: { onWriteWithAi?: (designId: string) => void }) {
   const { workspace } = useAuth();
   const toast = useToast();
   const workspaceId = workspace?.id ?? "demo";
@@ -308,7 +308,8 @@ export default function Designer() {
     }
   };
 
-  const saveCurrent = async (asCopy = false) => {
+  /** Saves the design in this browser. Returns its id, or null when it could not be saved. */
+  const saveCurrent = async (asCopy = false): Promise<string | null> => {
     try {
       const thumb = (await renderToCanvas(240)).toDataURL("image/jpeg", 0.7);
       const id = asCopy || !currentId ? newId() : currentId;
@@ -316,16 +317,24 @@ export default function Designer() {
       const next = upsertDesign(saved, { id, name: saveName, updatedAt: new Date().toISOString(), thumb, design });
       if (!saveDesigns(storage(), workspaceId, next)) {
         toast.error("This browser has no room left to save. Delete an old design or use smaller pictures.");
-        return;
+        return null;
       }
       setSaved(next);
       setCurrentId(id);
       setName(saveName);
       setBaseline(JSON.stringify([design, saveName]));
       toast.success(asCopy ? "Saved as a new design" : "Design saved in this browser");
+      return id;
     } catch {
       toast.error("Could not save the design.");
+      return null;
     }
+  };
+
+  /** Save the design, then open the AI Content Studio with it so the AI writes the caption for this picture. */
+  const writeWithAi = async () => {
+    const id = await saveCurrent();
+    if (id) onWriteWithAi?.(id);
   };
 
   const openSaved = (item: SavedDesign) => {
@@ -401,6 +410,7 @@ export default function Designer() {
             {dirty ? "Unsaved changes" : currentId ? "Saved" : ""}
           </span>
           <button onClick={() => void useInPost()} disabled={exporting} className={btnCls}><Send className="w-4 h-4" /> Use in post</button>
+          {onWriteWithAi && <button onClick={() => void writeWithAi()} disabled={exporting} className={btnCls}><Sparkles className="w-4 h-4" /> Write caption with AI</button>}
           <button onClick={() => void exportPng()} disabled={exporting} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg bg-blue-600 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
             <Download className="w-4 h-4" /> {exporting ? "Preparing…" : "Download PNG"}
           </button>

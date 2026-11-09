@@ -4,7 +4,7 @@ import type { TabId } from "./types";
 import Sidebar from "./components/Sidebar";
 import TopNav from "./components/TopNav";
 import Overview from "./components/Overview";
-import Studio from "./components/Studio";
+import Studio, { type StudioDesignHandoff } from "./components/Studio";
 import Designer from "./components/Designer";
 import HelpAssistant from "./components/HelpAssistant";
 import Accounts from "./components/Accounts";
@@ -44,6 +44,7 @@ function Splash() {
 function Dashboard({ theme, onToggleTheme }: ThemeProps) {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [designHandoff, setDesignHandoff] = useState<StudioDesignHandoff | null>(null);
   const { mode } = useAuth();
   const toast = useToast();
   const social = useSocialAccounts();
@@ -113,10 +114,15 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
           {activeTab === "overview" && <Overview onNavigate={setActiveTab} />}
           {/* Kept mounted (just hidden) so generated results survive tab switches. */}
           <div hidden={activeTab !== "studio"}>
-            <Studio />
+            <Studio designHandoff={designHandoff} />
           </div>
           <div hidden={activeTab !== "design"}>
-            <Designer />
+            <Designer
+              onWriteWithAi={(id) => {
+                setDesignHandoff({ id, nonce: Date.now() });
+                setActiveTab("studio");
+              }}
+            />
           </div>
           {activeTab === "calendar" && <Calendar />}
           {activeTab === "inbox" && <Inbox />}
