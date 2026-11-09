@@ -26,6 +26,7 @@ import { useToast } from "./context/ToastContext";
 import { connectErrorMessage } from "./lib/socialAccounts";
 import { ToastProvider } from "./context/ToastContext";
 import { supabase } from "./lib/supabase";
+import { HEARTBEAT_MS, touchPresence } from "./lib/presence";
 import { createLocalPostsRepo, createSupabasePostsRepo, type PostsRepo } from "./lib/postsRepo";
 import { createLocalMessagesRepo, createSupabaseMessagesRepo, type MessagesRepo } from "./lib/messagesRepo";
 
@@ -85,6 +86,22 @@ function Dashboard({ theme, onToggleTheme }: ThemeProps) {
     if (mode !== "supabase") return;
     void refreshAccounts();
   }, [mode, refreshAccounts]);
+
+  // Heartbeat: while this tab is open and visible, tell the database every minute that this person is online.
+  useEffect(() => {
+    if (mode !== "supabase" || !supabase) return;
+    const client = supabase;
+    const ping = () => {
+      if (document.visibilityState === "visible") void touchPresence(client);
+    };
+    ping();
+    const timer = window.setInterval(ping, HEARTBEAT_MS);
+    document.addEventListener("visibilitychange", ping);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", ping);
+    };
+  }, [mode]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">

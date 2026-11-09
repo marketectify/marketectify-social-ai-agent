@@ -425,3 +425,7 @@ Without `.env.local` the app starts in demo mode.
 | Receiving direct messages (DMs), and instant (instead of every 5 minutes) comments | Extra Meta approval for messaging, and Meta webhooks |
 
 The platform approvals can take days or weeks, so it is worth starting those applications early.
+
+## 17. Who is online (Admin)
+
+Run `supabase/migrations/0015_presence.sql` in the Supabase SQL Editor. After that, every signed-in tab pings the database about once a minute, and the **Admin → Accounts** table shows each account as **Online** (seen in the last 2.5 minutes) or **Offline** with "last seen". The list refreshes every 30 seconds. Before the file is run the Admin page says the status is not set up yet.
