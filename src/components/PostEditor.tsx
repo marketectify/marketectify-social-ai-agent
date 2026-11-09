@@ -461,7 +461,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
               )}
               {metaTargets.length > 0 && metaMissing.length === 0 && (
                 <p className="text-xs text-slate-700">
-                  Facebook / Instagram: sent automatically at the scheduled time (checked every 5 minutes), or press <strong>Publish now</strong>.
+                  Facebook, Instagram, LinkedIn and Google Business: sent automatically at the scheduled time (checked every minute), or press <strong>Publish now</strong>.
                 </p>
               )}
               {metaMissing.length > 0 && (
