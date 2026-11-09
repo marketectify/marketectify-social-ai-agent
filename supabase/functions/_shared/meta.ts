@@ -625,7 +625,9 @@ export async function handleCron(req: Request, deps: MetaDeps): Promise<Response
     }
   }
   let imported = 0;
-  for (const ws of await deps.listMetaWorkspaces()) {
+  // The every-minute scheduler job passes ?comments=skip: publishing is time sensitive, importing comments is not.
+  const skipComments = new URL(req.url).searchParams.get("comments") === "skip";
+  for (const ws of skipComments ? [] : await deps.listMetaWorkspaces()) {
     const r = await syncWorkspaceComments(ws, deps).catch(() => ({ imported: 0, problems: [] as string[] }));
     imported += r.imported;
   }

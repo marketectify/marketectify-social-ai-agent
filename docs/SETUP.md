@@ -283,6 +283,22 @@ Posts "What's new" updates (text and one picture, no video, no hashtags) to **on
 
 Notes: the first location of the account is connected. If Google says "access refused" while connecting, the API approval is not finished yet.
 
+## 15. Scheduler (posts go out on time)
+
+GitHub's own schedule can run hours late. Supabase can call the `meta-cron` function every minute instead (free plan included).
+
+1. Run `supabase/migrations/0013_scheduler.sql` in the SQL editor (turns on pg_cron and pg_net and creates two jobs).
+2. Still in the SQL editor, store the two values it needs (replace the text in quotes; the second must be exactly your `CRON_SECRET` from Edge Function secrets). Do not share this query:
+
+```sql
+select vault.create_secret('https://wdgkekjqxodhvrfedeyc.supabase.co', 'project_url');
+select vault.create_secret('PASTE-YOUR-CRON-SECRET-HERE', 'cron_secret');
+```
+
+3. Check: in a minute run `select status, return_message from cron.job_run_details order by start_time desc limit 3;` (should say `succeeded`) and, in Edge Functions -> meta-cron -> Logs, look for a request every minute.
+4. Change a secret later: Supabase -> Vault, edit `cron_secret`.
+
+The jobs: every minute they publish approved posts that are due (no comment import), and every 5 minutes they also import new comments. The old GitHub schedule is switched off; the workflow can still be started by hand.
 ## 16. YouTube: post videos and answer comments
 
 YouTube was read-only (channel numbers). The app now also **posts videos** and **reads and answers comments**.
