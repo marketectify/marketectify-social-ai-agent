@@ -5,6 +5,7 @@ import { usePlan } from "../context/PlanContext";
 import { useToast } from "../context/ToastContext";
 import { adminAccounts, adminRequests, adminResolve, adminSetPlan, type AdminAccount, type AdminRequest } from "../lib/upgrade";
 import { formatDateTime } from "../lib/dates";
+import { adminPresence, lastSeenText, presenceCounts, presenceState, type PresenceState } from "../lib/presence";
 import type { Plan } from "../lib/plan";
 
 /** Only for the site owner: answer upgrade requests and see which account is on which plan. */
@@ -14,6 +15,9 @@ export default function AdminPage() {
   const [requests, setRequests] = useState<AdminRequest[]>([]);
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  // workspace id -> when the owner was last seen. null = the 0015 SQL file has not been run yet.
+  const [seen, setSeen] = useState<Map<string, string | null> | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
@@ -35,6 +39,28 @@ export default function AdminPage() {
   useEffect(() => {
     if (isAdmin) void load();
   }, [isAdmin, load]);
+
+  // Online status refreshes by itself every 30 seconds.
+  useEffect(() => {
+    if (!isAdmin || !supabase) return;
+    const client = supabase;
+    let alive = true;
+    const tick = async () => {
+      const map = await adminPresence(client);
+      if (!alive) return;
+      setSeen(map);
+      setNow(Date.now());
+    };
+    void tick();
+    const timer = window.setInterval(() => void tick(), 30_000);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+    };
+  }, [isAdmin]);
+
+  const stateOf = (workspaceId: string): PresenceState => presenceState(seen?.get(workspaceId), now);
+  const counts = presenceCounts(accounts.map((a) => stateOf(a.workspaceId)));
 
   if (!isAdmin) {
     return <p className="text-sm text-slate-700">This page is only for the site owner.</p>;
@@ -116,16 +142,27 @@ export default function AdminPage() {
       </section>
 
       <section aria-labelledby="acc-title">
-        <h3 id="acc-title" className="text-lg font-bold text-slate-900 mb-3">Accounts</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <h3 id="acc-title" className="text-lg font-bold text-slate-900">Accounts</h3>
+          {seen && (
+            <p className="text-xs text-slate-600" aria-live="polite">
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">{counts.online} online</span> · {counts.offline} offline
+            </p>
+          )}
+        </div>
+        {seen === null && !loading && (
+          <p className="text-xs text-amber-800 dark:text-amber-300 mb-2">Online status is not set up yet. Run the 0015_presence.sql file in Supabase to turn it on.</p>
+        )}
         {loading ? (
           <div className="h-24 rounded-xl bg-slate-100 animate-pulse" aria-hidden="true" />
         ) : (
           <div className="glass rounded-2xl overflow-x-auto">
-            <table className="w-full text-sm min-w-[32rem]">
+            <table className="w-full text-sm min-w-[38rem]">
               <thead>
                 <tr className="text-xs text-slate-600 text-left">
                   <th className="font-medium p-3">Account</th>
                   <th className="font-medium p-3">Created</th>
+                  <th className="font-medium p-3">Status</th>
                   <th className="font-medium p-3">Plan</th>
                 </tr>
               </thead>
@@ -137,6 +174,9 @@ export default function AdminPage() {
                       <p className="text-xs text-slate-600">{a.email}</p>
                     </td>
                     <td className="p-3 text-xs text-slate-600">{formatDateTime(a.createdAt)}</td>
+                    <td className="p-3">
+                      <StatusCell state={stateOf(a.workspaceId)} lastSeen={seen?.get(a.workspaceId) ?? null} now={now} known={seen !== null} />
+                    </td>
                     <td className="p-3">
                       <label className="sr-only" htmlFor={`plan-${a.workspaceId}`}>Plan of {a.workspaceName}</label>
                       <select
@@ -157,6 +197,20 @@ export default function AdminPage() {
           </div>
         )}
       </section>
+    </div>
+  );
+}
+
+function StatusCell({ state, lastSeen, now, known }: { state: PresenceState; lastSeen: string | null; now: number; known: boolean }) {
+  if (!known) return <span className="text-xs text-slate-500">Unknown</span>;
+  const online = state === "online";
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${online ? "bg-emerald-500" : "bg-slate-400"}`} aria-hidden="true" />
+      <div>
+        <p className={`text-xs font-semibold ${online ? "text-emerald-700 dark:text-emerald-400" : "text-slate-700"}`}>{online ? "Online" : "Offline"}</p>
+        {!online && <p className="text-[11px] text-slate-500">{lastSeenText(lastSeen, now)}</p>}
+      </div>
     </div>
   );
 }
