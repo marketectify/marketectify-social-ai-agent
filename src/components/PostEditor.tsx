@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AlertCircle, Check, Clock, Copy, Download, ImagePlus, Video, Loader2, Send, Trash2, X } from "lucide-react";
+import { AlertCircle, Check, Clock, Copy, Download, ImagePlus, Palette, Video, Loader2, Send, Trash2, X } from "lucide-react";
 import type { Platform, Post, PostInput, PostMedia, PostStatus } from "../types";
 import { platformLabels } from "../data";
 import { platformIcons } from "./PlatformIcon";
@@ -15,6 +15,10 @@ import { defaultSchedule } from "../lib/schedule";
 import { parseHashtags } from "../lib/hashtags";
 import { VIDEO_MAX_BYTES } from "../lib/mediaStore";
 import { POST_PLATFORMS, isAutoPublish } from "../lib/platforms";
+import DesignPicker from "./DesignPicker";
+import { useAuth } from "../context/AuthContext";
+import { loadDesigns, type SavedDesign } from "../lib/designStore";
+import { renderDesignBlob } from "../lib/designRender";
 
 const CAPTION_LIMIT = 2200;
 
@@ -53,6 +57,26 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
   const [pendingFile, setPendingFile] = useState<Blob | null>(initial?.mediaFile ?? null);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const { workspace } = useAuth();
+  const [pickingDesign, setPickingDesign] = useState(false);
+  const [designs, setDesigns] = useState<SavedDesign[]>([]);
+  const openDesignPicker = () => {
+    try {
+      setDesigns(loadDesigns(window.localStorage, workspace?.id ?? "demo"));
+    } catch {
+      setDesigns([]);
+    }
+    setPickingDesign(true);
+  };
+  const useDesign = async (d: SavedDesign) => {
+    setPickingDesign(false);
+    try {
+      setPendingFile(await renderDesignBlob(d.design));
+      setTitle((t) => (t.trim() ? t : d.name.slice(0, 80)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not use this design.");
+    }
+  };
   const platformsRef = useRef<HTMLFieldSetElement>(null);
   const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
@@ -359,6 +383,9 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
                     <button type="button" onClick={() => fileInput.current?.click()} className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100/60">
                       Change file
                     </button>
+                    <button type="button" onClick={openDesignPicker} className="h-9 px-3 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100/60">
+                      Use a design
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -373,14 +400,24 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
                 )}
               </div>
             ) : (
-              <button
-                type="button"
-                disabled={locked}
-                onClick={() => fileInput.current?.click()}
-                className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-slate-300 text-sm text-slate-700 hover:bg-slate-100/50 disabled:opacity-60"
-              >
-                <ImagePlus className="w-4 h-4" aria-hidden="true" /> <Video className="w-4 h-4 -ml-1" aria-hidden="true" /> Add a picture or video
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={locked}
+                  onClick={() => fileInput.current?.click()}
+                  className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-slate-300 text-sm text-slate-700 hover:bg-slate-100/50 disabled:opacity-60"
+                >
+                  <ImagePlus className="w-4 h-4" aria-hidden="true" /> <Video className="w-4 h-4 -ml-1" aria-hidden="true" /> Add a picture or video
+                </button>
+                <button
+                  type="button"
+                  disabled={locked}
+                  onClick={openDesignPicker}
+                  className="inline-flex items-center gap-2 h-10 px-3 rounded-xl border border-dashed border-slate-300 text-sm text-slate-700 hover:bg-slate-100/50 disabled:opacity-60"
+                >
+                  <Palette className="w-4 h-4" aria-hidden="true" /> Use a design
+                </button>
+              </div>
             )}
             <input
               ref={fileInput}
@@ -393,6 +430,7 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
                 e.target.value = "";
               }}
             />
+            {pickingDesign && <DesignPicker designs={designs} onPick={(d) => void useDesign(d)} onClose={() => setPickingDesign(false)} />}
           </div>
 
           <fieldset ref={platformsRef} disabled={locked}>
