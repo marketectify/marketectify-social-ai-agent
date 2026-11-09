@@ -61,10 +61,14 @@ describe("signed state", () => {
 });
 
 describe("buildAuthUrl and parseChannel", () => {
-  it("asks for read-only access and a refresh token", () => {
+  it("asks for channel numbers, posting and comments, and a refresh token", () => {
     const u = new URL(buildAuthUrl({ clientId: "cid", redirectUri: "https://r.test/cb", state: "S" }));
     expect(u.origin + u.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
-    expect(u.searchParams.get("scope")).toBe("https://www.googleapis.com/auth/youtube.readonly");
+    expect(u.searchParams.get("scope")!.split(" ")).toEqual([
+      "https://www.googleapis.com/auth/youtube.readonly",
+      "https://www.googleapis.com/auth/youtube.upload",
+      "https://www.googleapis.com/auth/youtube.force-ssl",
+    ]);
     expect(u.searchParams.get("access_type")).toBe("offline");
     expect(u.searchParams.get("prompt")).toBe("consent");
     expect(u.searchParams.get("state")).toBe("S");

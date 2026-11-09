@@ -5,14 +5,14 @@ import { platformLabels } from "../data";
 import { platformIcons } from "./PlatformIcon";
 import { useSocialAccounts } from "../context/SocialAccountsContext";
 import { useToast } from "../context/ToastContext";
-import { formatCount } from "../lib/socialAccounts";
+import { formatCount, youtubeNeedsReconnect } from "../lib/socialAccounts";
 import { ALL_PLATFORMS, isAutoPublish } from "../lib/platforms";
 
 const INFO: Record<Platform, { does: string; note?: string }> = {
   facebook: { does: "Posts, scheduling and comment replies on your Page.", note: "One Facebook login also connects the Instagram account linked to the Page." },
   instagram: { does: "Photo posts, scheduling and comment replies.", note: "Needs an Instagram Business or Creator account linked to your Facebook Page." },
   linkedin: { does: "Posts and scheduling on your personal LinkedIn profile.", note: "The login lasts about 60 days; connect again when it expires. Company Pages need extra approval from LinkedIn." },
-  youtube: { does: "Channel numbers in the dashboard.", note: "Uploading videos needs a Google audit. For now, post videos by hand." },
+  youtube: { does: "Posts videos, reads comments and answers them. Channel numbers in the dashboard.", note: "Until Google audits your project, YouTube keeps uploaded videos private; you can make them public in YouTube Studio." },
   tiktok: { does: "Not available yet.", note: "TikTok needs approval for apps. Post by hand and mark it as published." },
   gbp: { does: "\"What's new\" posts on your Google Business Profile (picture and text, no video).", note: "Connects the first location of your Google account. Google must approve Business Profile API access for your project first." },
 };
@@ -74,12 +74,29 @@ export default function Accounts() {
                   {account.subscribers !== null && <span className="text-slate-500 font-normal">· {formatCount(account.subscribers)}</span>}
                 </div>
               ) : null}
+              {account && youtubeNeedsReconnect(account) && (
+                <p role="status" className="text-xs rounded-lg bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300 px-2.5 py-2">
+                  This connection can only read numbers. Connect again and allow posting and comments.
+                </p>
+              )}
               <p className="text-xs text-slate-600">{isAutoPublish(p) ? INFO[p].does : ""} {INFO[p].note}</p>
               <div className="mt-auto">
                 {account ? (
-                  <button onClick={() => void disconnect(p, account.id)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:underline">
-                    <Unplug className="w-3.5 h-3.5" /> Disconnect
-                  </button>
+                  <div className="flex items-center gap-4">
+                    {youtubeNeedsReconnect(account) && canConnect && (
+                      <button
+                        onClick={() => void connect(p)}
+                        disabled={busy !== null}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-60"
+                      >
+                        {busy === p ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plug className="w-3.5 h-3.5" />}
+                        Connect again
+                      </button>
+                    )}
+                    <button onClick={() => void disconnect(p, account.id)} className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:underline">
+                      <Unplug className="w-3.5 h-3.5" /> Disconnect
+                    </button>
+                  </div>
                 ) : canConnect ? (
                   <button
                     onClick={() => void connect(p)}

@@ -15,10 +15,10 @@ export const META_SCOPES = [
 
 export type MetaPlatform = "facebook" | "instagram";
 /** Platforms this publisher sends posts to by itself. */
-export type AutoPlatform = MetaPlatform | "linkedin" | "gbp";
-const AUTO: AutoPlatform[] = ["facebook", "instagram", "linkedin", "gbp"];
+export type AutoPlatform = MetaPlatform | "linkedin" | "gbp" | "youtube";
+const AUTO: AutoPlatform[] = ["facebook", "instagram", "linkedin", "gbp", "youtube"];
 const isAuto = (p: string): p is AutoPlatform => (AUTO as string[]).includes(p);
-const NAMES: Record<AutoPlatform, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn", gbp: "Google Business" };
+const NAMES: Record<AutoPlatform, string> = { facebook: "Facebook", instagram: "Instagram", linkedin: "LinkedIn", gbp: "Google Business", youtube: "YouTube" };
 
 export interface MetaAccountRow {
   platform: AutoPlatform;
@@ -34,6 +34,8 @@ export interface MetaAccountRow {
   expiresAt?: string | null;
   /** Google Business: long-lived login used to get a fresh access token for every post. */
   refreshToken?: string | null;
+  /** Scopes saved when the person connected (YouTube checks them for posting and comments). */
+  scopes?: string | null;
 }
 
 export interface PostRow {
@@ -58,7 +60,7 @@ export interface MessageRow {
 
 export interface ImportedComment {
   externalId: string;
-  platform: MetaPlatform;
+  platform: MetaPlatform | "youtube";
   senderName: string;
   senderHandle: string;
   body: string;
@@ -94,6 +96,10 @@ export interface MetaDeps {
   /** Waits (used while Instagram processes a video). Tests pass an instant one. */
   sleep: (ms: number) => Promise<void>;
   /** Sends the post to Google Business Profile (see gbp.ts). */
+  /** YouTube (see youtube_api.ts): post a video, read unanswered comments, answer a comment. */
+  publishYouTube: (post: PostRow, account: MetaAccountRow) => Promise<{ ok: boolean; id?: string; message?: string }>;
+  youtubeComments: (account: MetaAccountRow) => Promise<{ ok: true; comments: ImportedComment[] } | { ok: false; message: string }>;
+  youtubeReply: (account: MetaAccountRow, parentId: string, text: string) => Promise<{ ok: true } | { ok: false; message: string }>;
   publishGbp: (post: PostRow, account: MetaAccountRow) => Promise<{ ok: boolean; id?: string; message?: string }>;
   publishLinkedIn: (post: PostRow, account: MetaAccountRow) => Promise<{ ok: boolean; id?: string; message?: string }>;
   loadPost: (workspaceId: string, postId: string) => Promise<PostRow | null>;
@@ -270,6 +276,10 @@ export async function publishToPlatform(post: PostRow, platform: AutoPlatform, d
   if (!account) return { platform, ok: false, message: `${NAMES[platform]} is not connected.` };
   const caption = buildCaption(post);
   try {
+    if (platform === "youtube") {
+      const r = await deps.publishYouTube(post, account);
+      return r.ok && r.id ? { platform, ok: true, id: r.id } : { platform, ok: false, message: r.message ?? "YouTube did not accept the video." };
+    }
     if (platform === "gbp") {
       const r = await deps.publishGbp(post, account);
       return r.ok && r.id ? { platform, ok: true, id: r.id } : { platform, ok: false, message: r.message ?? "Google did not accept the post." };
@@ -393,15 +403,37 @@ export async function syncWorkspaceComments(workspaceId: string, deps: MetaDeps)
       problems.push("Instagram: could not reach Meta.");
     }
   }
+  const yt = await deps.loadAccount(workspaceId, "youtube");
+  if (yt) {
+    try {
+      const res = await deps.youtubeComments(yt);
+      if (res.ok) found = found.concat(res.comments);
+      else problems.push(`YouTube: ${res.message}`);
+    } catch {
+      problems.push("YouTube: could not reach Google.");
+    }
+  }
   const imported = found.length ? await deps.importComments(workspaceId, found) : 0;
   return { imported, problems };
 }
 
 export async function sendReply(message: MessageRow, text: string, deps: MetaDeps): Promise<{ ok: true } | { ok: false; message: string }> {
-  if (message.platform !== "facebook" && message.platform !== "instagram") return { ok: false, message: "Only Facebook and Instagram comments can be answered from here." };
+  if (message.platform !== "facebook" && message.platform !== "instagram" && message.platform !== "youtube") {
+    return { ok: false, message: "Only Facebook, Instagram and YouTube comments can be answered from here." };
+  }
   if (!message.externalId) return { ok: false, message: "This message was added by hand, so it cannot be answered on the platform. Copy the reply instead." };
   const account = await deps.loadAccount(message.workspaceId, message.platform);
-  if (!account) return { ok: false, message: `${message.platform === "facebook" ? "Facebook" : "Instagram"} is not connected.` };
+  if (!account) return { ok: false, message: `${NAMES[message.platform]} is not connected.` };
+  if (message.platform === "youtube") {
+    try {
+      const r = await deps.youtubeReply(account, message.externalId, text);
+      if (!r.ok) return r;
+      await deps.markReplied(message.id, text);
+      return { ok: true };
+    } catch {
+      return { ok: false, message: "Could not reach YouTube. Please try again." };
+    }
+  }
   try {
     const path = message.platform === "facebook" ? `${message.externalId}/comments` : `${message.externalId}/replies`;
     const res = await deps.graph("POST", path, { message: text }, account.token);
@@ -541,7 +573,7 @@ export async function handleApi(req: Request, deps: MetaDeps): Promise<Response>
     if (post.status === "published") return fail(409, "already_published", "This post is already marked as published.");
     if (post.status !== "approved") return fail(409, "not_approved", "Approve the post first. Only approved posts are published.");
     if (!post.platforms.some(isAuto)) {
-      return fail(400, "no_meta_platform", "This post has no Facebook, Instagram, LinkedIn or Google Business platform.");
+      return fail(400, "no_meta_platform", "This post has no Facebook, Instagram, LinkedIn, YouTube or Google Business platform.");
     }
     if (!(await deps.claimPost(post.id).catch(() => false))) return fail(409, "busy", "This post is being published right now. Wait a moment and reload.");
     try {

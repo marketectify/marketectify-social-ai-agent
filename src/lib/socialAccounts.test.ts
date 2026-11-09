@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { connectErrorMessage, formatCount, fromRow } from "./socialAccounts";
+import { connectErrorMessage, formatCount, fromRow, youtubeNeedsReconnect } from "./socialAccounts";
 
 describe("formatCount", () => {
   it.each([
@@ -18,6 +18,22 @@ describe("fromRow", () => {
   });
   it("copes with numbers sent as strings (bigint)", () => {
     expect(fromRow({ ...row, view_count: "123456789" as unknown as number }).viewCount).toBe(123456789);
+  });
+});
+
+describe("youtubeNeedsReconnect", () => {
+  const base = "https://www.googleapis.com/auth/";
+  it("asks for a new connection when posting or comments are missing", () => {
+    expect(youtubeNeedsReconnect({ platform: "youtube", scopes: `${base}youtube.readonly` })).toBe(true);
+    expect(youtubeNeedsReconnect({ platform: "youtube", scopes: `${base}youtube.readonly ${base}youtube.upload` })).toBe(true);
+    expect(youtubeNeedsReconnect({ platform: "youtube", scopes: `${base}youtube.upload ${base}youtube.force-ssl` })).toBe(false);
+  });
+  it("stays quiet when the permissions are unknown or it is another platform", () => {
+    expect(youtubeNeedsReconnect({ platform: "youtube", scopes: null })).toBe(false);
+    expect(youtubeNeedsReconnect({ platform: "facebook", scopes: "meta" })).toBe(false);
+  });
+  it("reads scopes from a row", () => {
+    expect(fromRow({ id: "1", platform: "youtube", display_name: "A", handle: "", avatar_url: "", subscribers: 1, video_count: 1, view_count: 1, stats_updated_at: null, scopes: "x y" }).scopes).toBe("x y");
   });
 });
 

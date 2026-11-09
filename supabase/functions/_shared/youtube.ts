@@ -1,7 +1,12 @@
 // Shared, import-free logic for the YouTube connection (runs in Deno, Node tests and nowhere near the browser).
 // All outside access (Google, database, login check) is injected through `YtDeps`, so the whole flow is testable.
 
-export const YT_SCOPE = "https://www.googleapis.com/auth/youtube.readonly";
+/** readonly: channel numbers. upload: post videos. force-ssl: read comments and reply. */
+export const YT_SCOPE = [
+  "https://www.googleapis.com/auth/youtube.readonly",
+  "https://www.googleapis.com/auth/youtube.upload",
+  "https://www.googleapis.com/auth/youtube.force-ssl",
+].join(" ");
 export const STATE_TTL_MS = 10 * 60_000;
 
 export const CORS_HEADERS: Record<string, string> = {

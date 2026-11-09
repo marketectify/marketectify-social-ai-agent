@@ -110,6 +110,9 @@ export default function PostEditor({ post, defaultDate, initial, onClose }: Post
       if (shownKind === "video" && (pendingFile || media) && platforms.includes("linkedin")) {
         return "LinkedIn video posts are not supported yet. Remove LinkedIn or use a picture.";
       }
+      if (platforms.includes("youtube") && !((pendingFile || media) && shownKind === "video")) {
+        return "YouTube needs a video. Add an MP4 or remove YouTube.";
+      }
       const when = fromLocalInputValue(schedule);
       if (!when) return "Pick a date and time.";
       if (target === "approved" && new Date(when).getTime() <= Date.now()) {

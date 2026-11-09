@@ -128,7 +128,7 @@ export default function Inbox() {
 
   // Facebook / Instagram: comments are pulled into the Inbox, and replies are sent back to the platform.
   const social = useSocialAccounts();
-  const metaConnected = Boolean(social.get("facebook") || social.get("instagram"));
+  const metaConnected = Boolean(social.get("facebook") || social.get("instagram") || social.get("youtube"));
   const [syncing, setSyncing] = useState(false);
   const syncedOnce = useRef(false);
 
@@ -247,7 +247,7 @@ export default function Inbox() {
         <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-600 dark:text-blue-400" />
         {metaConnected ? (
           <p>
-            Comments on your connected Facebook Page and Instagram account arrive here by themselves (checked every 5 minutes, or press{" "}
+            Comments on your connected Facebook Page, Instagram account and YouTube channel arrive here by themselves (checked every 5 minutes, or press{" "}
             <strong className="font-semibold">Check for new comments</strong>). Let the AI draft the reply, then{" "}
             <strong className="font-semibold">send it</strong> straight to the comment. TikTok and YouTube messages are not connected: paste
             them with <strong className="font-semibold">Add message</strong>.
@@ -400,7 +400,7 @@ export default function Inbox() {
               suggestion={auto.drafts[selected.id] ?? ""}
               demo={mode === "demo"}
               canSendToPlatform={Boolean(
-                supabase && selected.externalId && (selected.platform === "facebook" || selected.platform === "instagram") && social.get(selected.platform),
+                supabase && selected.externalId && (selected.platform === "facebook" || selected.platform === "instagram" || selected.platform === "youtube") && social.get(selected.platform),
               )}
               onSendToPlatform={async (reply) => {
                 if (!supabase) return;
