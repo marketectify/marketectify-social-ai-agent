@@ -120,7 +120,7 @@ export default function Sidebar({ activeTab, onTabChange, mobileOpen, onClose }:
                         } ${active ? "bg-white/10 text-white" : "hover:bg-white/5 hover:text-white"}`}
                       >
                         {active && <span aria-hidden="true" className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r-full bg-sky-400" />}
-                        <Icon className={`w-5 h-5 shrink-0 ${active ? "text-sky-300" : "text-[#8493ad] group-hover:text-sky-200"}`} aria-hidden="true" />
+                        <Icon className={`w-5 h-5 shrink-0 transition-transform duration-150 group-hover:scale-110 ${active ? "text-sky-300" : "text-[#8493ad] group-hover:text-sky-200"}`} aria-hidden="true" />
                         <span className={`text-sm leading-tight truncate ${active ? "font-semibold" : "font-medium"} ${slim ? "lg:hidden" : ""}`}>{item.label}</span>
                       </button>
                     </li>

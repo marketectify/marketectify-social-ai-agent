@@ -116,3 +116,73 @@ select option {
 :root { --brand-bar: 1.75rem; }
 #root { padding-top: var(--brand-bar); }
 .min-h-screen { min-height: calc(100vh - var(--brand-bar)); }
+
+/* ---------------------------------------------------------------------------
+   Motion: small and quick (150-250 ms), only opacity and transforms.
+   Everything is switched off for people who asked their system for less motion.
+   --------------------------------------------------------------------------- */
+@layer base {
+  button, a, [role="button"], select, summary {
+    transition-property: background-color, border-color, color, box-shadow, opacity, transform;
+    transition-duration: 150ms;
+    transition-timing-function: ease-out;
+  }
+  button:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+}
+
+/* Main buttons rise a little on hover and press back down. */
+button.bg-blue-600:hover:not(:disabled),
+a.bg-blue-600:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+button.bg-blue-600:active:not(:disabled) {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+/* A page fades and slides up a few pixels when you open it (also when a kept-alive page is shown again). */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+main > * {
+  animation: page-in 220ms ease-out;
+}
+
+/* Windows pop in softly. `scale` is its own property, so it never fights the transforms used to center a window. */
+@keyframes dialog-in {
+  from { opacity: 0; scale: 0.96; }
+  to { opacity: 1; scale: 1; }
+}
+[role="dialog"]:not(.animate-slide-in) {
+  animation: dialog-in 180ms ease-out;
+}
+
+/* Dark backdrops fade in. */
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fixed.inset-0.backdrop-blur-sm {
+  animation: backdrop-in 180ms ease-out;
+}
+
+/* Cards that are buttons or links lift slightly when pointed at. */
+a.glass, button.glass {
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out, border-color 150ms ease-out;
+}
+a.glass:hover, button.glass:hover {
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
